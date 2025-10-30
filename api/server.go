@@ -1,12 +1,15 @@
 package api
 
 import (
-	"fmt"
-	"log"
-	"net/http"
-	"nofx/manager"
+    "fmt"
+    "log"
+    "net/http"
+    "nofx/manager"
+    "os"
+    "path/filepath"
+    "strings"
 
-	"github.com/gin-gonic/gin"
+    "github.com/gin-gonic/gin"
 )
 
 // Server HTTP API服务器
@@ -32,10 +35,13 @@ func NewServer(traderManager *manager.TraderManager, port int) *Server {
 		port:          port,
 	}
 
-	// 设置路由
-	s.setupRoutes()
+    // 设置路由
+    s.setupRoutes()
 
-	return s
+    // 托管前端静态文件（如果存在）
+    s.setupFrontend()
+
+    return s
 }
 
 // corsMiddleware CORS中间件
@@ -78,6 +84,41 @@ func (s *Server) setupRoutes() {
 		api.GET("/equity-history", s.handleEquityHistory)
 		api.GET("/performance", s.handlePerformance)
 	}
+}
+
+// setupFrontend 托管 web/dist 静态资源，并提供 SPA 回退
+func (s *Server) setupFrontend() {
+    distDir := filepath.Join("web", "dist")
+    indexPath := filepath.Join(distDir, "index.html")
+    if _, err := os.Stat(indexPath); err != nil {
+        log.Printf("ℹ️ 未找到前端构建产物（%s），仅启动 API 路由", indexPath)
+        return
+    }
+
+    // 静态资源目录（Vite 默认 assets 路径）
+    s.router.Static("/assets", filepath.Join(distDir, "assets"))
+
+    // 首页
+    s.router.GET("/", func(c *gin.Context) {
+        c.File(indexPath)
+    })
+
+    // SPA 回退：非 /api 和 /health 的未命中路由返回 index.html
+    s.router.NoRoute(func(c *gin.Context) {
+        p := c.Request.URL.Path
+        if strings.HasPrefix(p, "/api") || p == "/health" {
+            c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+            return
+        }
+        // 仅当浏览器请求 HTML 时回退
+        if strings.Contains(c.GetHeader("Accept"), "text/html") {
+            c.File(indexPath)
+            return
+        }
+        c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+    })
+
+    log.Printf("🖥️ 前端已托管: %s", distDir)
 }
 
 // handleHealth 健康检查

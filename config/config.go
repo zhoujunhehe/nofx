@@ -4,6 +4,8 @@ import (
     "encoding/json"
     "fmt"
     "encoding/base64"
+    "net/http"
+    "io"
     "os"
     "time"
 )
@@ -78,6 +80,28 @@ func LoadConfig(filename string) (*Config, error) {
             return nil, fmt.Errorf("解析环境变量 CONFIG_JSON_B64 失败: %w", decErr)
         }
         data = decoded
+    } else if url := os.Getenv("CONFIG_URL"); url != "" {
+        client := &http.Client{Timeout: 5 * time.Second}
+        req, reqErr := http.NewRequest(http.MethodGet, url, nil)
+        if reqErr != nil {
+            return nil, fmt.Errorf("创建配置下载请求失败: %w", reqErr)
+        }
+        if auth := os.Getenv("CONFIG_URL_AUTH"); auth != "" {
+            req.Header.Set("Authorization", auth)
+        }
+        resp, httpErr := client.Do(req)
+        if httpErr != nil {
+            return nil, fmt.Errorf("下载配置失败: %w", httpErr)
+        }
+        defer resp.Body.Close()
+        if resp.StatusCode != http.StatusOK {
+            return nil, fmt.Errorf("下载配置失败: HTTP %d", resp.StatusCode)
+        }
+        body, readErr := io.ReadAll(resp.Body)
+        if readErr != nil {
+            return nil, fmt.Errorf("读取配置内容失败: %w", readErr)
+        }
+        data = body
     } else {
         // 允许通过 CONFIG_PATH 指定路径
         if path := os.Getenv("CONFIG_PATH"); path != "" {
