@@ -59,10 +59,13 @@ func main() {
         log.Printf("🌐 当前主机出口IP: 未能获取（可能无外网或服务超时）")
     }
 
+	// 设置默认主流币种列表
+	pool.SetDefaultCoins(cfg.DefaultCoins)
+
 	// 设置是否使用默认主流币种
 	pool.SetUseDefaultCoins(cfg.UseDefaultCoins)
 	if cfg.UseDefaultCoins {
-		log.Printf("✓ 已启用默认主流币种列表（BTC、ETH、SOL、BNB、XRP、DOGE、ADA、HYPE）")
+		log.Printf("✓ 已启用默认主流币种列表（共%d个币种）: %v", len(cfg.DefaultCoins), cfg.DefaultCoins)
 	}
 
 	// 设置币种池API URL
