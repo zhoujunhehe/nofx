@@ -92,6 +92,22 @@ func (s *Server) setupFrontend() {
     indexPath := filepath.Join(distDir, "index.html")
     if _, err := os.Stat(indexPath); err != nil {
         log.Printf("ℹ️ 未找到前端构建产物（%s），仅启动 API 路由", indexPath)
+        // 提供一个友好的占位首页，避免根路径超时
+        s.router.GET("/", func(c *gin.Context) {
+            c.Header("Content-Type", "text/html; charset=utf-8")
+            c.String(http.StatusOK, `<!doctype html>
+<html><head><meta charset="utf-8"/><title>NOFX</title></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Arial, sans-serif; padding: 24px;">
+  <h1>NOFX 服务已启动</h1>
+  <p>未找到前端构建产物 <code>web/dist</code>。当前仅提供 API。</p>
+  <p>
+    健康检查：<a href="/health">/health</a><br/>
+    竞赛总览：<a href="/api/competition">/api/competition</a><br/>
+    Trader 列表：<a href="/api/traders">/api/traders</a>
+  </p>
+  <p style="color:#888">如果你在 Railway 上部署，请确保 Docker 构建阶段成功执行了前端构建（npm ci && npm run build）。</p>
+ </body></html>`)
+        })
         return
     }
 
