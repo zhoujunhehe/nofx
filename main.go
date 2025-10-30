@@ -25,6 +25,9 @@ func main() {
 	fmt.Println("╚════════════════════════════════════════════════════════════╝")
 	fmt.Println()
 
+	// 将标准日志输出重定向到 stdout，避免在 Railway 等平台被标记为 error（stderr）
+	log.SetOutput(os.Stdout)
+
 	// 加载配置文件
 	configFile := "config.json"
 	if len(os.Args) > 1 {
