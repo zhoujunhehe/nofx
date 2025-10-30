@@ -1,16 +1,21 @@
 package main
 
 import (
-	"fmt"
-	"log"
-	"nofx/api"
-	"nofx/config"
-	"nofx/manager"
-	"nofx/pool"
-	"os"
-	"os/signal"
-	"strings"
-	"syscall"
+    "context"
+    "fmt"
+    "io"
+    "log"
+    "net"
+    "net/http"
+    "nofx/api"
+    "nofx/config"
+    "nofx/manager"
+    "nofx/pool"
+    "os"
+    "os/signal"
+    "strings"
+    "syscall"
+    "time"
 )
 
 func main() {
@@ -25,14 +30,21 @@ func main() {
 		configFile = os.Args[1]
 	}
 
-	log.Printf("📋 加载配置文件: %s", configFile)
-	cfg, err := config.LoadConfig(configFile)
-	if err != nil {
-		log.Fatalf("❌ 加载配置失败: %v", err)
-	}
+    log.Printf("📋 加载配置文件: %s", configFile)
+    cfg, err := config.LoadConfig(configFile)
+    if err != nil {
+        log.Fatalf("❌ 加载配置失败: %v", err)
+    }
 
-	log.Printf("✓ 配置加载成功，共%d个trader参赛", len(cfg.Traders))
-	fmt.Println()
+    log.Printf("✓ 配置加载成功，共%d个trader参赛", len(cfg.Traders))
+    fmt.Println()
+
+    // 打印当前主机出口 IP（最佳努力，超时快速返回）
+    if ip := detectPublicIP(); ip != "" {
+        log.Printf("🌐 当前主机出口IP: %s", ip)
+    } else {
+        log.Printf("🌐 当前主机出口IP: 未能获取（可能无外网或服务超时）")
+    }
 
 	// 设置是否使用默认主流币种
 	pool.SetUseDefaultCoins(cfg.UseDefaultCoins)
@@ -116,4 +128,44 @@ func main() {
 
 	fmt.Println()
 	fmt.Println("👋 感谢使用AI交易竞赛系统！")
+}
+
+// detectPublicIP 尝试通过多个公共服务获取当前主机的出口 IP。
+// 返回空字符串表示未获取到。
+func detectPublicIP() string {
+    endpoints := []string{
+        "https://api.ipify.org?format=text",
+        "https://ifconfig.me/ip",
+        "https://ipinfo.io/ip",
+        "https://checkip.amazonaws.com",
+    }
+
+    client := &http.Client{Timeout: 3 * time.Second}
+
+    for _, url := range endpoints {
+        // 为每次请求设置最短超时与取消控制
+        ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+        req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+        if err != nil {
+            cancel()
+            continue
+        }
+        // 简单标识
+        req.Header.Set("User-Agent", "nofx-egress-ip-check/1.0")
+
+        resp, err := client.Do(req)
+        if err != nil {
+            cancel()
+            continue
+        }
+        body, _ := io.ReadAll(resp.Body)
+        resp.Body.Close()
+        cancel()
+
+        ipStr := strings.TrimSpace(string(body))
+        if ip := net.ParseIP(ipStr); ip != nil {
+            return ipStr
+        }
+    }
+    return ""
 }
