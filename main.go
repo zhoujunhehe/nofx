@@ -13,6 +13,7 @@ import (
     "nofx/pool"
     "os"
     "os/signal"
+    "strconv"
     "strings"
     "syscall"
     "time"
@@ -38,6 +39,18 @@ func main() {
 
     log.Printf("✓ 配置加载成功，共%d个trader参赛", len(cfg.Traders))
     fmt.Println()
+
+    // Railway/Nixpacks: 如果存在环境变量 PORT，则覆盖配置文件中的端口
+    if p := os.Getenv("PORT"); p != "" {
+        if port, err := strconv.Atoi(p); err == nil && port > 0 {
+            if port != cfg.APIServerPort {
+                log.Printf("🔧 检测到环境变量 PORT=%d，覆盖 api_server_port=%d", port, cfg.APIServerPort)
+            }
+            cfg.APIServerPort = port
+        } else {
+            log.Printf("⚠️  环境变量 PORT='%s' 非法，继续使用配置端口 %d", p, cfg.APIServerPort)
+        }
+    }
 
     // 打印当前主机出口 IP（最佳努力，超时快速返回）
     if ip := detectPublicIP(); ip != "" {

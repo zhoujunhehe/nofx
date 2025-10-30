@@ -1,10 +1,11 @@
 package config
 
 import (
-	"encoding/json"
-	"fmt"
-	"os"
-	"time"
+    "encoding/json"
+    "fmt"
+    "encoding/base64"
+    "os"
+    "time"
 )
 
 // TraderConfig 单个trader的配置
@@ -63,15 +64,35 @@ type Config struct {
 
 // LoadConfig 从文件加载配置
 func LoadConfig(filename string) (*Config, error) {
-	data, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, fmt.Errorf("读取配置文件失败: %w", err)
-	}
+    var (
+        data []byte
+        err  error
+    )
 
-	var config Config
-	if err := json.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf("解析配置文件失败: %w", err)
-	}
+    // 优先从环境变量加载（适配 Railway 等云平台）
+    if raw := os.Getenv("CONFIG_JSON"); raw != "" {
+        data = []byte(raw)
+    } else if b64 := os.Getenv("CONFIG_JSON_B64"); b64 != "" {
+        decoded, decErr := base64.StdEncoding.DecodeString(b64)
+        if decErr != nil {
+            return nil, fmt.Errorf("解析环境变量 CONFIG_JSON_B64 失败: %w", decErr)
+        }
+        data = decoded
+    } else {
+        // 允许通过 CONFIG_PATH 指定路径
+        if path := os.Getenv("CONFIG_PATH"); path != "" {
+            filename = path
+        }
+        data, err = os.ReadFile(filename)
+        if err != nil {
+            return nil, fmt.Errorf("读取配置文件失败: %w", err)
+        }
+    }
+
+    var config Config
+    if err := json.Unmarshal(data, &config); err != nil {
+        return nil, fmt.Errorf("解析配置失败: %w", err)
+    }
 
 	// 设置默认值：如果use_default_coins未设置（为false）且没有配置coin_pool_api_url，则默认使用默认币种列表
 	if !config.UseDefaultCoins && config.CoinPoolAPIURL == "" {

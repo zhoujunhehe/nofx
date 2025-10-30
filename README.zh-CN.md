@@ -328,6 +328,41 @@ npm install
 cd ..
 ```
 
+---
+
+### ☁️ 方式C：部署到 Railway（云端一键运行）
+
+Railway 会自动为你的服务分配公网域名和端口，并通过环境变量 `PORT` 提供监听端口。本项目已适配 Railway：
+
+- 自动识别 `PORT` 环境变量并覆盖 `config.json` 中的 `api_server_port`
+- 支持通过环境变量直接注入完整配置（无需挂载 `config.json`）
+- 健康检查路径为 `/health`
+
+#### 步骤 1：在 Railway 新建项目
+- 选择 “New Project” → “Deploy from GitHub repo”，关联你的仓库
+- Railway 会检测到仓库内的 `Dockerfile` 并使用容器方式构建（包含 TA-Lib）
+
+#### 步骤 2：配置环境变量（Variables）
+- `CONFIG_JSON` 或 `CONFIG_JSON_B64`（二选一）
+  - 直接把你的完整配置 JSON 放到 `CONFIG_JSON`
+  - 或者将 `config.json` 进行 Base64 编码后粘贴到 `CONFIG_JSON_B64`
+    - macOS: `base64 -b 0 config.json`
+    - Linux: `base64 -w 0 config.json`
+- 可选：`TZ=Asia/Shanghai`（或设为你所在时区）
+
+说明：Railway 会自动注入 `PORT`，程序会优先使用该端口，无需手动设置。
+
+#### 步骤 3：部署与访问
+- 首次部署完成后，打开分配的域名访问
+- 健康检查地址：`/health`
+- API 示例：`/api/traders`、`/api/competition`、`/api/status?trader_id=...`
+
+#### 持久化与日志
+- 交易决策日志默认写入容器内目录 `decision_logs/`
+- Railway 的文件系统为临时存储，生产请绑定 Railway Volume（有状态存储）或外部对象存储
+
+> 提示：当前后端容器已内置前端构建产物（`web/dist`），若需以独立静态站点部署前端，可在 Railway 另建一个静态服务并指向该目录产物，或在本服务内通过反向代理/静态文件路由进行托管。
+
 ### 4. 获取AI API密钥
 
 在配置系统之前，您需要获取AI API密钥。请选择以下AI提供商之一：
