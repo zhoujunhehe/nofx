@@ -148,7 +148,7 @@ export function LandingPage() {
                     item === 'GitHub'
                       ? 'https://github.com/tinkle-community/nofx'
                       : item === '社区'
-                      ? 'https://t.me/+SSr6N7Wepx'
+                      ? 'https://t.me/nofx_dev_community'
                       : `#${item === '功能' ? 'features' : 'how-it-works'}`
                   }
                   target={
@@ -856,7 +856,7 @@ $ docker compose up -d
                     text: 'GitHub',
                     href: 'https://github.com/tinkle-community/nofx',
                   },
-                  { text: 'Telegram', href: 'https://t.me/+SSr6N7Wepx' },
+                  { text: 'Telegram', href: 'https://t.me/nofx_dev_community' },
                   { text: 'X (Twitter)', href: 'https://x.com/nofx_ai' },
                 ],
               },
