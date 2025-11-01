@@ -37,13 +37,7 @@ const staggerContainer = {
   },
 }
 
-const floatingAnimation = {
-  y: [0, -20, 0],
-  transition: {
-    duration: 3,
-    repeat: Infinity,
-  },
-}
+// removed floatingAnimation to match simplified style
 
 export function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
