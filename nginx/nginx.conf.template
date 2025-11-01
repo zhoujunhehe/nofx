@@ -1,7 +1,7 @@
 # nginx.conf template for NOFX Frontend (Railway)
 
 server {
-    listen ${PORT:-8080};
+    listen $PORT;
     server_name localhost;
 
     # Frontend root
@@ -49,4 +49,3 @@ server {
         access_log off;
     }
 }
-
