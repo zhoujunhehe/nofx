@@ -1,0 +1,61 @@
+{
+  "mcpServers": {
+    "firecrawl-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "firecrawl-mcp"
+      ],
+      "env": {
+        "FIRECRAWL_API_KEY": "fc-48fc6fb6bdaf4ea38b4e6d0a0dabee92"
+      }
+    },
+    "Magic MCP": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@21st-dev/magic@latest",
+        "API_KEY=\"1320765efa0c480c90e0f48fbccde4be84f6ee2fe1bd819e9b36d5c3a0505be1\""
+      ],
+      "env": {}
+    },
+    "fetch": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-fetch"
+      ]
+    },
+    "context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp@latest"
+      ]
+    },
+    "supabase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase@latest",
+        "--project-ref=uphfsnismyvtkzeqnbxb"
+      ],
+      "env": {
+        "SUPABASE_ACCESS_TOKEN": "sbp_21c652f4f6db8b810bbb5dea66b055e3dc1b88a0"
+      }
+    },
+    "shadcn": {
+      "command": "npx",
+      "args": [
+        "shadcn@latest",
+        "mcp"
+      ]
+    },
+    "react-bits": {
+      "command": "npx",
+      "args": [
+        "shadcn@latest",
+        "mcp"
+      ]
+    }
+  }
+}
