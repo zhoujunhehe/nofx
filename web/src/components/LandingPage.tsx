@@ -3,19 +3,11 @@ import { motion, useScroll, useTransform, useInView } from 'framer-motion'
 import {
   Menu,
   X,
-  Github,
-  MessageCircle,
-  Star,
   Code,
-  Zap,
-  Users,
   GitBranch,
-  TrendingUp,
   Shield,
-  Globe,
   ArrowRight,
   ChevronDown,
-  ExternalLink,
   Sparkles,
   Target,
   Rocket,
@@ -34,7 +26,7 @@ const fadeInUp = {
 const fadeInScale = {
   initial: { opacity: 0, scale: 0.8 },
   animate: { opacity: 1, scale: 1 },
-  transition: { duration: 0.5, ease: 'easeOut' },
+  transition: { duration: 0.5 },
 }
 
 const staggerContainer = {
@@ -50,7 +42,6 @@ const floatingAnimation = {
   transition: {
     duration: 3,
     repeat: Infinity,
-    ease: 'easeInOut',
   },
 }
 
@@ -81,11 +72,7 @@ export function LandingPage() {
             scale: [1, 1.2, 1],
             opacity: [0.1, 0.15, 0.1],
           }}
-          transition={{
-            duration: 8,
-            repeat: Infinity,
-            ease: 'easeInOut',
-          }}
+          transition={{ duration: 8, repeat: Infinity }}
         />
         <motion.div
           className='absolute bottom-0 left-0 w-[600px] h-[600px] rounded-full opacity-10'
@@ -96,12 +83,7 @@ export function LandingPage() {
             scale: [1, 1.3, 1],
             opacity: [0.1, 0.2, 0.1],
           }}
-          transition={{
-            duration: 10,
-            repeat: Infinity,
-            ease: 'easeInOut',
-            delay: 1,
-          }}
+          transition={{ duration: 10, repeat: Infinity, delay: 1 }}
         />
       </div>
 
@@ -114,7 +96,7 @@ export function LandingPage() {
         }}
         initial={{ y: -100 }}
         animate={{ y: 0 }}
-        transition={{ duration: 0.6, ease: 'easeOut' }}
+        transition={{ duration: 0.6 }}
       >
         <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
           <div className='flex items-center justify-between h-16'>
@@ -1002,47 +984,7 @@ function AnimatedSection({
   )
 }
 
-function FeatureCard({ icon, title, description, delay }: any) {
-  return (
-    <motion.div
-      className='p-6 rounded-xl transition-all group'
-      style={{
-        background: 'var(--brand-dark-gray)',
-        border: '1px solid rgba(240, 185, 11, 0.1)',
-      }}
-      variants={fadeInUp}
-      whileHover={{
-        scale: 1.05,
-        borderColor: 'var(--brand-yellow)',
-        boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4)',
-      }}
-    >
-      <motion.div
-        className='w-14 h-14 rounded-full flex items-center justify-center mb-4'
-        style={{
-          background: 'rgba(240, 185, 11, 0.1)',
-          color: 'var(--brand-yellow)',
-        }}
-        whileHover={{ rotate: 360, scale: 1.1 }}
-        transition={{ duration: 0.6 }}
-      >
-        {icon}
-      </motion.div>
-      <h3
-        className='text-xl font-semibold mb-3'
-        style={{ color: 'var(--brand-light-gray)' }}
-      >
-        {title}
-      </h3>
-      <p
-        className='text-sm leading-relaxed'
-        style={{ color: 'var(--text-secondary)' }}
-      >
-        {description}
-      </p>
-    </motion.div>
-  )
-}
+// Removed unused FeatureCard component
 
 function StepCard({ number, title, description, delay }: any) {
   return (
@@ -1093,6 +1035,7 @@ function TestimonialCard({ quote, author, delay }: any) {
         border: '1px solid rgba(240, 185, 11, 0.1)',
       }}
       variants={fadeInScale}
+      transition={{ delay }}
       whileHover={{
         scale: 1.05,
         borderColor: 'var(--brand-yellow)',
