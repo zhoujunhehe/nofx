@@ -1,19 +1,20 @@
 package api
 
 import (
-	"encoding/json"
-	"fmt"
-	"log"
-	"net"
-	"net/http"
-	"nofx/auth"
-	"nofx/config"
-	"nofx/decision"
-	"nofx/manager"
-	"nofx/trader"
-	"strconv"
-	"strings"
-	"time"
+    "encoding/json"
+    "fmt"
+    "log"
+    "net"
+    "net/http"
+    "nofx/auth"
+    "nofx/config"
+    "nofx/decision"
+    "nofx/manager"
+    "nofx/trader"
+    "os"
+    "strconv"
+    "strings"
+    "time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -68,53 +69,43 @@ func corsMiddleware() gin.HandlerFunc {
 
 // setupRoutes 设置路由
 func (s *Server) setupRoutes() {
-	// API路由组
-	api := s.router.Group("/api")
-	{
-		// 健康检查
-		api.Any("/health", s.handleHealth)
+    // API路由组
+    api := s.router.Group("/api")
+    {
+        // 健康检查
+        api.Any("/health", s.handleHealth)
 
-		// 管理员登录（管理员模式下使用，公共）
-		api.POST("/admin-login", s.handleAdminLogin)
+		// 认证相关路由（无需认证）
+		api.POST("/register", s.handleRegister)
+		api.POST("/login", s.handleLogin)
+		api.POST("/verify-otp", s.handleVerifyOTP)
+		api.POST("/complete-registration", s.handleCompleteRegistration)
 
 		// 系统支持的模型和交易所（无需认证）
 		api.GET("/supported-models", s.handleGetSupportedModels)
 		api.GET("/supported-exchanges", s.handleGetSupportedExchanges)
 
-		// 非管理员模式下的公开认证路由
-		if !auth.IsAdminMode() {
-			// 认证相关路由（无需认证）
-			api.POST("/register", s.handleRegister)
-			api.POST("/login", s.handleLogin)
-			api.POST("/verify-otp", s.handleVerifyOTP)
-			api.POST("/complete-registration", s.handleCompleteRegistration)
+        // 系统配置（无需认证）
+        api.GET("/config", s.handleGetSystemConfig)
 
-		}
+        // 公共：Roadmap（GitHub Projects 动态数据）
+        api.GET("/roadmap", s.handleRoadmap)
 
-		// 系统配置（无需认证，用于前端判断是否管理员模式/注册是否开启）
-		api.GET("/config", s.handleGetSystemConfig)
+		// 系统提示词模板管理（无需认证）
+		api.GET("/prompt-templates", s.handleGetPromptTemplates)
+		api.GET("/prompt-templates/:name", s.handleGetPromptTemplate)
 
-		// 系统提示词模板管理（仅在非管理员模式下公开）
-		if !auth.IsAdminMode() {
-			// 系统提示词模板管理（无需认证）
-			api.GET("/prompt-templates", s.handleGetPromptTemplates)
-			api.GET("/prompt-templates/:name", s.handleGetPromptTemplate)
-
-			// 公开的竞赛数据（无需认证）
-			api.GET("/traders", s.handlePublicTraderList)
-			api.GET("/competition", s.handlePublicCompetition)
-			api.GET("/top-traders", s.handleTopTraders)
-			api.GET("/equity-history", s.handleEquityHistory)
-			api.POST("/equity-history-batch", s.handleEquityHistoryBatch)
-			api.GET("/traders/:id/public-config", s.handleGetPublicTraderConfig)
-		}
+		// 公开的竞赛数据（无需认证）
+		api.GET("/traders", s.handlePublicTraderList)
+		api.GET("/competition", s.handlePublicCompetition)
+		api.GET("/top-traders", s.handleTopTraders)
+		api.GET("/equity-history", s.handleEquityHistory)
+		api.POST("/equity-history-batch", s.handleEquityHistoryBatch)
+		api.GET("/traders/:id/public-config", s.handleGetPublicTraderConfig)
 
 		// 需要认证的路由
 		protected := api.Group("/", s.authMiddleware())
 		{
-			// 注销（加入黑名单）
-			protected.POST("/logout", s.handleLogout)
-
 			// 服务器IP查询（需要认证，用于白名单配置）
 			protected.GET("/server-ip", s.handleGetServerIP)
 
@@ -151,6 +142,221 @@ func (s *Server) setupRoutes() {
 			protected.GET("/performance", s.handlePerformance)
 		}
 	}
+}
+
+// handleRoadmap 从 GitHub GraphQL API 获取组织 ProjectV2 路线图摘要
+// 需要在服务端配置环境变量：
+//   GITHUB_TOKEN: GitHub PAT，至少具有 read:org / project 只读权限
+//   GITHUB_ORG:  组织登录名（默认：NoFxAiOS）
+//   GITHUB_ROADMAP_PROJECT_NUMBER: 项目编号（默认：3）
+func (s *Server) handleRoadmap(c *gin.Context) {
+    org := strings.TrimSpace(getEnvDefault("GITHUB_ORG", "NoFxAiOS"))
+    projectNumberStr := strings.TrimSpace(getEnvDefault("GITHUB_ROADMAP_PROJECT_NUMBER", "3"))
+    token := strings.TrimSpace(os.Getenv("GITHUB_TOKEN"))
+
+    projectNumber := 3
+    if n, err := strconv.Atoi(projectNumberStr); err == nil && n > 0 {
+        projectNumber = n
+    }
+
+    // 安全兜底：无令牌则只返回链接
+    if token == "" {
+        c.JSON(http.StatusOK, gin.H{
+            "title": "NOFX Roadmap",
+            "url":   "https://github.com/orgs/" + org + "/projects/" + strconv.Itoa(projectNumber),
+            "items": []any{},
+            "note":  "GITHUB_TOKEN 未配置，返回链接占位。",
+        })
+        return
+    }
+
+    // GraphQL 查询
+    gql := `query($org: String!, $number: Int!, $first: Int!) {
+      organization(login: $org) {
+        projectV2(number: $number) {
+          title
+          url
+          items(first: $first) {
+            nodes {
+              id
+              content {
+                __typename
+                ... on Issue { title number url state repository { name } labels(first: 10) { nodes { name } } }
+                ... on PullRequest { title number url state repository { name } }
+                ... on DraftIssue { title }
+              }
+              fieldValues(first: 20) {
+                nodes {
+                  __typename
+                  ... on ProjectV2ItemFieldSingleSelectValue { name field { name } }
+                  ... on ProjectV2ItemFieldTextValue { text field { name } }
+                  ... on ProjectV2ItemFieldIterationValue { title field { name } }
+                  ... on ProjectV2ItemFieldUserValue { users(first: 10) { nodes { login } } field { name } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }`
+
+    // 查询参数：默认拉取 20 条
+    limit := 20
+    if l := c.Query("limit"); l != "" {
+        if n, err := strconv.Atoi(l); err == nil && n > 0 && n <= 100 {
+            limit = n
+        }
+    }
+
+    reqBody := map[string]any{
+        "query": gql,
+        "variables": map[string]any{
+            "org":    org,
+            "number": projectNumber,
+            "first":  limit,
+        },
+    }
+
+    bodyBytes, _ := json.Marshal(reqBody)
+
+    httpReq, _ := http.NewRequest("POST", "https://api.github.com/graphql", strings.NewReader(string(bodyBytes)))
+    httpReq.Header.Set("Content-Type", "application/json")
+    httpReq.Header.Set("Authorization", "Bearer "+token)
+    httpReq.Header.Set("Accept", "application/vnd.github+json")
+
+    client := &http.Client{Timeout: 8 * time.Second}
+    resp, err := client.Do(httpReq)
+    if err != nil {
+        c.JSON(http.StatusOK, gin.H{
+            "title": "NOFX Roadmap",
+            "url":   "https://github.com/orgs/" + org + "/projects/" + strconv.Itoa(projectNumber),
+            "items": []any{},
+            "error": fmt.Sprintf("request failed: %v", err),
+        })
+        return
+    }
+    defer resp.Body.Close()
+
+    if resp.StatusCode != http.StatusOK {
+        c.JSON(http.StatusOK, gin.H{
+            "title": "NOFX Roadmap",
+            "url":   "https://github.com/orgs/" + org + "/projects/" + strconv.Itoa(projectNumber),
+            "items": []any{},
+            "error": fmt.Sprintf("unexpected status: %d", resp.StatusCode),
+        })
+        return
+    }
+
+    var gqlResp struct {
+        Data struct {
+            Organization struct {
+                Project struct {
+                    Title string `json:"title"`
+                    URL   string `json:"url"`
+                    Items struct {
+                        Nodes []struct {
+                            ID      string `json:"id"`
+                            Content struct {
+                                Typename   string `json:"__typename"`
+                                Title      string `json:"title"`
+                                Number     int    `json:"number"`
+                                URL        string `json:"url"`
+                                State      string `json:"state"`
+                                Repository struct {
+                                    Name string `json:"name"`
+                                } `json:"repository"`
+                                Labels struct {
+                                    Nodes []struct{ Name string `json:"name"` } `json:"nodes"`
+                                } `json:"labels"`
+                            } `json:"content"`
+                            FieldValues struct {
+                                Nodes []struct {
+                                    Typename string `json:"__typename"`
+                                    Name     string `json:"name"`
+                                    Text     string `json:"text"`
+                                    Title    string `json:"title"`
+                                    Field    struct{ Name string `json:"name"` } `json:"field"`
+                                    Users    struct {
+                                        Nodes []struct{ Login string `json:"login"` } `json:"nodes"`
+                                    } `json:"users"`
+                                } `json:"nodes"`
+                            } `json:"fieldValues"`
+                        } `json:"nodes"`
+                    } `json:"items"`
+                } `json:"projectV2"`
+            } `json:"organization"`
+        } `json:"data"`
+        Errors any `json:"errors"`
+    }
+
+    if err := json.NewDecoder(resp.Body).Decode(&gqlResp); err != nil {
+        c.JSON(http.StatusOK, gin.H{
+            "title": "NOFX Roadmap",
+            "url":   "https://github.com/orgs/" + org + "/projects/" + strconv.Itoa(projectNumber),
+            "items": []any{},
+            "error": fmt.Sprintf("decode error: %v", err),
+        })
+        return
+    }
+
+    // 归一化输出
+    out := struct {
+        Title string      `json:"title"`
+        URL   string      `json:"url"`
+        Items []any       `json:"items"`
+    }{
+        Title: gqlResp.Data.Organization.Project.Title,
+        URL:   gqlResp.Data.Organization.Project.URL,
+        Items: []any{},
+    }
+
+    for _, n := range gqlResp.Data.Organization.Project.Items.Nodes {
+        item := map[string]any{
+            "id":    n.ID,
+            "type":  n.Content.Typename,
+            "title": n.Content.Title,
+            "url":   n.Content.URL,
+            "state": n.Content.State,
+            "repo":  n.Content.Repository.Name,
+        }
+
+        // 提取常见字段值：Status、Assignees、Iteration 等
+        status := ""
+        assignees := []string{}
+        iteration := ""
+        for _, fv := range n.FieldValues.Nodes {
+            switch fv.Typename {
+            case "ProjectV2ItemFieldSingleSelectValue":
+                if strings.EqualFold(fv.Field.Name, "Status") {
+                    status = fv.Name
+                }
+            case "ProjectV2ItemFieldUserValue":
+                if strings.Contains(strings.ToLower(fv.Field.Name), "assignee") || strings.EqualFold(fv.Field.Name, "Assignees") {
+                    for _, u := range fv.Users.Nodes {
+                        assignees = append(assignees, u.Login)
+                    }
+                }
+            case "ProjectV2ItemFieldIterationValue":
+                if strings.EqualFold(fv.Field.Name, "Iteration") {
+                    iteration = fv.Title
+                }
+            }
+        }
+        item["status"] = status
+        item["assignees"] = assignees
+        item["iteration"] = iteration
+        out.Items = append(out.Items, item)
+    }
+
+    c.JSON(http.StatusOK, out)
+}
+
+// getEnvDefault 返回带默认值的环境变量
+func getEnvDefault(key, def string) string {
+    if v := os.Getenv(key); strings.TrimSpace(v) != "" {
+        return v
+    }
+    return def
 }
 
 // handleHealth 健康检查
@@ -1472,6 +1678,14 @@ func (s *Server) handlePerformance(c *gin.Context) {
 // authMiddleware JWT认证中间件
 func (s *Server) authMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// 如果是管理员模式，直接使用admin用户
+		if auth.IsAdminMode() {
+			c.Set("user_id", "admin")
+			c.Set("email", "admin@localhost")
+			c.Next()
+			return
+		}
+
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "缺少Authorization头"})
@@ -1487,18 +1701,8 @@ func (s *Server) authMiddleware() gin.HandlerFunc {
 			return
 		}
 
-
-		tokenString := tokenParts[1]
-
-		// 黑名单检查
-		if auth.IsTokenBlacklisted(tokenString) {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "token已失效，请重新登录"})
-			c.Abort()
-			return
-		}
-
 		// 验证JWT token
-		claims, err := auth.ValidateJWT(tokenString)
+		claims, err := auth.ValidateJWT(tokenParts[1])
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "无效的token: " + err.Error()})
 			c.Abort()
@@ -1512,79 +1716,8 @@ func (s *Server) authMiddleware() gin.HandlerFunc {
 	}
 }
 
-// handleAdminLogin 管理员登录（密码仅来自环境变量）
-func (s *Server) handleAdminLogin(c *gin.Context) {
-	if !auth.IsAdminMode() {
-		c.JSON(http.StatusForbidden, gin.H{"error": "仅管理员模式可用"})
-		return
-	}
-
-	// 简单的IP速率限制（5次/分钟 + 递增退避）
-	// 为简化，此处省略复杂实现，可在后续使用中间件或Redis增强
-
-	var req struct {
-		Password string `json:"password"`
-	}
-	if err := c.ShouldBindJSON(&req); err != nil || strings.TrimSpace(req.Password) == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "缺少密码"})
-		return
-	}
-	if !auth.CheckAdminPassword(req.Password) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "密码错误"})
-		return
-	}
-
-	token, err := auth.GenerateJWT("admin", "admin@localhost")
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "生成token失败"})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"token": token, "user_id": "admin", "email": "admin@localhost"})
-}
-
-// handleLogout 将当前token加入黑名单
-func (s *Server) handleLogout(c *gin.Context) {
-	authHeader := c.GetHeader("Authorization")
-	if authHeader == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "缺少Authorization头"})
-		return
-	}
-	parts := strings.Split(authHeader, " ")
-	if len(parts) != 2 || parts[0] != "Bearer" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "无效的Authorization格式"})
-		return
-	}
-	tokenString := parts[1]
-	claims, err := auth.ValidateJWT(tokenString)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "无效的token"})
-		return
-	}
-	var exp time.Time
-	if claims.ExpiresAt != nil {
-		exp = claims.ExpiresAt.Time
-	} else {
-		exp = time.Now().Add(24 * time.Hour)
-	}
-	auth.BlacklistToken(tokenString, exp)
-	c.JSON(http.StatusOK, gin.H{"message": "已登出"})
-}
-
 // handleRegister 处理用户注册请求
 func (s *Server) handleRegister(c *gin.Context) {
-	// 管理员模式下禁用注册
-	if auth.IsAdminMode() {
-		c.JSON(http.StatusForbidden, gin.H{"error": "管理员模式下禁用注册"})
-		return
-	}
-
-	// 若未开启注册，返回403
-	allowRegStr, _ := s.database.GetSystemConfig("allow_registration")
-	if allowRegStr == "false" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "注册已关闭"})
-		return
-	}
-
 	var req struct {
 		Email    string `json:"email" binding:"required,email"`
 		Password string `json:"password" binding:"required,min=6"`
@@ -1812,50 +1945,6 @@ func (s *Server) handleVerifyOTP(c *gin.Context) {
 		"email":   user.Email,
 		"message": "登录成功",
 	})
-}
-
-// handleResetPassword 重置密码（通过邮箱 + OTP 验证）
-func (s *Server) handleResetPassword(c *gin.Context) {
-	var req struct {
-		Email       string `json:"email" binding:"required,email"`
-		NewPassword string `json:"new_password" binding:"required,min=6"`
-		OTPCode     string `json:"otp_code" binding:"required"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	// 查询用户
-	user, err := s.database.GetUserByEmail(req.Email)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "邮箱不存在"})
-		return
-	}
-
-	// 验证 OTP
-	if !auth.VerifyOTP(user.OTPSecret, req.OTPCode) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Google Authenticator 验证码错误"})
-		return
-	}
-
-	// 生成新密码哈希
-	newPasswordHash, err := auth.HashPassword(req.NewPassword)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "密码处理失败"})
-		return
-	}
-
-	// 更新密码
-	err = s.database.UpdateUserPassword(user.ID, newPasswordHash)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "密码更新失败"})
-		return
-	}
-
-	log.Printf("✓ 用户 %s 密码已重置", user.Email)
-	c.JSON(http.StatusOK, gin.H{"message": "密码重置成功，请使用新密码登录"})
 }
 
 // initUserDefaultConfigs 为新用户初始化默认的模型和交易所配置
