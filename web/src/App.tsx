@@ -5,7 +5,6 @@ import { EquityChart } from './components/EquityChart'
 import { AITradersPage } from './components/AITradersPage'
 import { LoginPage } from './components/LoginPage'
 import { RegisterPage } from './components/RegisterPage'
-import { ResetPasswordPage } from './components/ResetPasswordPage'
 import { CompetitionPage } from './components/CompetitionPage'
 import { LandingPage } from './pages/LandingPage'
 import { FAQPage } from './pages/FAQPage'
@@ -230,17 +229,10 @@ function App() {
     return <LoginPage />
   }
   if (route === '/register') {
-    if (systemConfig?.admin_mode) {
-      window.history.pushState({}, '', '/login')
-      return <LoginPage />
-    }
     return <RegisterPage />
   }
   if (route === '/faq') {
     return <FAQPage />
-  }
-  if (route === '/reset-password') {
-    return <ResetPasswordPage />
   }
   if (route === '/competition') {
     return (
@@ -298,15 +290,10 @@ function App() {
 
   // Show landing page for root route
   if (route === '/' || route === '') {
-    return <LandingPage isAdminMode={systemConfig?.admin_mode} />
+    return <LandingPage />
   }
 
-  // In admin mode, require authentication for any protected routes
-  if (systemConfig?.admin_mode && (!user || !token)) {
-    return <LoginPage />
-  }
-
-  // Show main app for authenticated users on other routes (non-admin mode)
+  // Show main app for authenticated users on other routes
   if (!systemConfig?.admin_mode && (!user || !token)) {
     // Default to landing page when not authenticated and no specific route
     return <LandingPage />

@@ -265,11 +265,6 @@ export const translations = {
     addAIModel: 'Add AI Model',
     confirmDeleteModel:
       'Are you sure you want to delete this AI model configuration?',
-    cannotDeleteModelInUse:
-      'Cannot delete this AI model because it is being used by traders',
-    tradersUsing: 'Traders using this configuration',
-    pleaseDeleteTradersFirst:
-      'Please delete or reconfigure these traders first',
     selectModel: 'Select AI Model',
     pleaseSelectModel: 'Please select a model',
     customBaseURL: 'Base URL (Optional)',
@@ -286,8 +281,6 @@ export const translations = {
     addExchange: 'Add Exchange',
     confirmDeleteExchange:
       'Are you sure you want to delete this exchange configuration?',
-    cannotDeleteExchangeInUse:
-      'Cannot delete this exchange because it is being used by traders',
     pleaseSelectExchange: 'Please select an exchange',
     exchangeConfigWarning1:
       '• API keys will be encrypted, recommend using read-only or futures trading permissions',
@@ -344,15 +337,6 @@ export const translations = {
     forgotPassword: 'Forgot password?',
     rememberMe: 'Remember me',
     otpCode: 'OTP Code',
-    resetPassword: 'Reset Password',
-    resetPasswordTitle: 'Reset your password',
-    newPassword: 'New Password',
-    newPasswordPlaceholder: 'Enter new password (at least 6 characters)',
-    resetPasswordButton: 'Reset Password',
-    resetPasswordSuccess:
-      'Password reset successful! Please login with your new password',
-    resetPasswordFailed: 'Password reset failed',
-    backToLogin: 'Back to Login',
     scanQRCode: 'Scan QR Code',
     enterOTPCode: 'Enter 6-digit OTP code',
     verifyOTP: 'Verify OTP',
@@ -523,7 +507,6 @@ export const translations = {
 
     // FAQ Categories
     faqCategoryBasics: 'General Questions',
-    faqCategoryContributing: 'Contributing & Tasks',
     faqCategorySetup: 'Setup & Configuration',
     faqCategoryTrading: 'Trading Questions',
     faqCategoryTechnical: 'Technical Issues',
@@ -546,15 +529,6 @@ export const translations = {
     faqMultipleTraders: 'Can I run multiple traders simultaneously?',
     faqMultipleTradersAnswer:
       'Yes! NOFX supports running multiple traders with different configurations, AI models, and trading strategies.',
-
-    // Contributing & Community
-    faqGithubProjectsTasks: 'How to use GitHub Projects and pick up tasks?',
-    faqGithubProjectsTasksAnswer:
-      'Roadmap: https://github.com/orgs/NoFxAiOS/projects/3  • Task Dashboard: https://github.com/orgs/NoFxAiOS/projects/5  • Steps: Open links → filter by labels (good first issue / help wanted / frontend / backend) → read Description & Acceptance Criteria → comment "assign me" or self-assign → Fork the repo → sync your fork\'s dev with upstream/dev → create a feature branch from your fork\'s dev → push to your fork → open PR (base: NoFxAiOS/nofx:dev ← compare: your-username/nofx:feat/your-topic) → reference Issue (Closes #123) and use the proper template.',
-
-    faqContributePR: 'How to properly submit PRs and contribute?',
-    faqContributePRAnswer:
-      "Guidelines: • Fork first; branch from your fork's dev (avoid direct commits to upstream main) • Branch naming: feat/..., fix/..., docs/...; Conventional Commits • Run checks before PR: npm --prefix web run lint && npm --prefix web run build • For UI changes, attach screenshots or a short video • Choose the proper PR template (frontend/backend/docs/general) • Open PR from your fork to NoFxAiOS/nofx:dev and link Issue (Closes #123) • Keep rebasing onto upstream/dev; ensure CI passes; prefer small, focused PRs • Read CONTRIBUTING.md and .github/PR_TITLE_GUIDE.md",
 
     // Setup & Configuration
     faqSystemRequirements: 'What are the system requirements?',
@@ -936,9 +910,6 @@ export const translations = {
     editAIModel: '编辑AI模型',
     addAIModel: '添加AI模型',
     confirmDeleteModel: '确定要删除此AI模型配置吗？',
-    cannotDeleteModelInUse: '无法删除此AI模型，因为有交易员正在使用',
-    tradersUsing: '正在使用此配置的交易员',
-    pleaseDeleteTradersFirst: '请先删除或重新配置这些交易员',
     selectModel: '选择AI模型',
     pleaseSelectModel: '请选择模型',
     customBaseURL: 'Base URL (可选)',
@@ -951,7 +922,6 @@ export const translations = {
     editExchange: '编辑交易所',
     addExchange: '添加交易所',
     confirmDeleteExchange: '确定要删除此交易所配置吗？',
-    cannotDeleteExchangeInUse: '无法删除此交易所，因为有交易员正在使用',
     pleaseSelectExchange: '请选择交易所',
     exchangeConfigWarning1: '• API密钥将被加密存储，建议使用只读或期货交易权限',
     exchangeConfigWarning2: '• 不要授予提现权限，确保资金安全',
@@ -1003,14 +973,6 @@ export const translations = {
     loginNow: '立即登录',
     forgotPassword: '忘记密码？',
     rememberMe: '记住我',
-    resetPassword: '重置密码',
-    resetPasswordTitle: '重置您的密码',
-    newPassword: '新密码',
-    newPasswordPlaceholder: '请输入新密码（至少6位）',
-    resetPasswordButton: '重置密码',
-    resetPasswordSuccess: '密码重置成功！请使用新密码登录',
-    resetPasswordFailed: '密码重置失败',
-    backToLogin: '返回登录',
     otpCode: 'OTP验证码',
     scanQRCode: '扫描二维码',
     enterOTPCode: '输入6位OTP验证码',
@@ -1164,7 +1126,6 @@ export const translations = {
 
     // FAQ Categories
     faqCategoryBasics: '基础问题',
-    faqCategoryContributing: '贡献与任务',
     faqCategorySetup: '安装与配置',
     faqCategoryTrading: '交易问题',
     faqCategoryTechnical: '技术问题',
@@ -1187,15 +1148,6 @@ export const translations = {
     faqMultipleTraders: '可以同时运行多个交易员吗？',
     faqMultipleTradersAnswer:
       '可以！NOFX 支持运行多个交易员，每个可配置不同的 AI 模型和交易策略。',
-
-    // Contributing & Community
-    faqGithubProjectsTasks: '如何在 GitHub Projects 中领取任务？',
-    faqGithubProjectsTasksAnswer:
-      '路线图：https://github.com/orgs/NoFxAiOS/projects/3 ｜ 任务看板：https://github.com/orgs/NoFxAiOS/projects/5 ｜ 步骤：打开链接 → 按标签筛选（good first issue / help wanted / frontend / backend）→ 阅读描述与验收标准 → 评论“assign me”或自助分配 → Fork 仓库 → 同步你 fork 的 dev 与 upstream/dev → 从你 fork 的 dev 创建特性分支 → 推送到你的 fork → 打开 PR（base：NoFxAiOS/nofx:dev ← compare：你的用户名/nofx:feat/your-topic）→ 关联 Issue（Closes #123）并选择正确模板。',
-
-    faqContributePR: '如何规范地提交 PR 并参与贡献？',
-    faqContributePRAnswer:
-      '规范：• 先 Fork；在你的 fork 的 dev 分支上创建特性分支（避免直接向上游 main 提交）• 分支命名：feat/...、fix/...、docs/...；提交信息遵循 Conventional Commits • PR 前运行检查：npm --prefix web run lint && npm --prefix web run build • 涉及 UI 变更请附截图/短视频 • 选择正确 PR 模板（frontend/backend/docs/general）• 从你的 fork 发起到 NoFxAiOS/nofx:dev，并在 PR 中关联 Issue（Closes #123）• 持续 rebase 到 upstream/dev，确保 CI 通过；尽量保持 PR 小而聚焦 • 参考 CONTRIBUTING.md 与 .github/PR_TITLE_GUIDE.md',
 
     // Setup & Configuration
     faqSystemRequirements: '系统要求是什么？',
