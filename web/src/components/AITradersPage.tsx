@@ -28,6 +28,7 @@ import {
   AlertTriangle,
   BookOpen,
   HelpCircle,
+  Radio,
 } from 'lucide-react'
 
 // 获取友好的AI模型名称
@@ -731,14 +732,15 @@ export function AITradersPage({ onTraderSelect }: AITradersPageProps) {
 
           <button
             onClick={() => setShowSignalSourceModal(true)}
-            className="px-3 md:px-4 py-2 rounded text-xs md:text-sm font-semibold transition-all hover:scale-105 whitespace-nowrap"
+            className="px-3 md:px-4 py-2 rounded text-xs md:text-sm font-semibold transition-all hover:scale-105 flex items-center gap-1 md:gap-2 whitespace-nowrap"
             style={{
               background: '#2B3139',
               color: '#EAECEF',
               border: '1px solid #474D57',
             }}
           >
-            📡 {t('signalSource', language)}
+            <Radio className="w-3 h-3 md:w-4 md:h-4" />
+            {t('signalSource', language)}
           </button>
 
           <button
@@ -793,7 +795,7 @@ export function AITradersPage({ onTraderSelect }: AITradersPageProps) {
                   <strong>{t('solutions', language)}</strong>
                 </p>
                 <ul className="list-disc list-inside space-y-1 ml-2 mt-1">
-                  <li>点击"📡 {t('signalSource', language)}"按钮配置API地址</li>
+                  <li>点击"{t('signalSource', language)}"按钮配置API地址</li>
                   <li>或在交易员配置中禁用"使用币种池"和"使用OI Top"</li>
                   <li>或在交易员配置中设置自定义币种列表</li>
                 </ul>
@@ -1292,7 +1294,7 @@ function SignalSourceModal({
         style={{ background: '#1E2329' }}
       >
         <h3 className="text-xl font-bold mb-4" style={{ color: '#EAECEF' }}>
-          📡 {t('signalSourceConfig', language)}
+          {t('signalSourceConfig', language)}
         </h3>
 
         <form onSubmit={handleSubmit} className="space-y-4">
