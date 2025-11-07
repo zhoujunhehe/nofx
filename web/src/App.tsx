@@ -496,7 +496,7 @@ function TraderDetailsPage({
             onClick={onNavigateToTraders}
             className="px-6 py-3 rounded-lg font-semibold transition-all hover:scale-105 active:scale-95"
             style={{
-              background: 'linear-gradient(135deg, #F0B90B 0%, #FCD535 100%)',
+              background: '#F0B90B',
               color: '#0B0E11',
               boxShadow: '0 4px 12px rgba(240, 185, 11, 0.3)',
             }}
@@ -552,7 +552,7 @@ function TraderDetailsPage({
             onClick={onNavigateToTraders}
             className="px-6 py-3 rounded-lg font-semibold transition-all hover:scale-105 active:scale-95"
             style={{
-              background: 'linear-gradient(135deg, #F0B90B 0%, #FCD535 100%)',
+              background: '#F0B90B',
               color: '#0B0E11',
               boxShadow: '0 4px 12px rgba(240, 185, 11, 0.3)',
             }}
@@ -613,7 +613,7 @@ function TraderDetailsPage({
             <span
               className="w-10 h-10 rounded-full flex items-center justify-center text-xl"
               style={{
-                background: 'linear-gradient(135deg, #F0B90B 0%, #FCD535 100%)',
+                background: '#F0B90B',
               }}
             >
               🤖
