@@ -11,6 +11,7 @@ import (
 	"nofx/crypto"
 	"nofx/manager"
 	"nofx/market"
+	"nofx/market/kline"
 	"nofx/pool"
 	_ "nofx/proxy"
 	"os"
@@ -18,6 +19,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -347,8 +349,23 @@ func main() {
 		}
 	}()
 
-	// 启动流行情数据 - 默认使用所有交易员设置的币种 如果没有设置币种 则优先使用系统默认
-	go market.NewWSMonitor(150).Start(database.GetCustomCoins())
+	// 初始化 kline 服务（3m/4h）
+	customCoins := database.GetCustomCoins()
+	opts := kline.Options{
+		BatchSize:             150,
+		BackfillWindow:        100,
+		WSEndpoint:            kline.WSEndpointFutures,
+		RestMaxConcurrency:    20,
+		SymbolRefreshInterval: 24 * time.Hour,
+	}
+	if err := kline.InitDefault(opts, customCoins); err != nil {
+		log.Printf("⚠️  初始化kline服务失败: %v", err)
+	} else {
+		log.Printf("✓ kline服务已初始化")
+	}
+
+	// 启动流行情数据（用于非K线功能，如告警、ticker等）
+	go market.NewWSMonitor(150).Start(customCoins)
 	//go market.NewWSMonitor(150).Start([]string{}) //这里是一个使用方式 传入空的话 则使用market市场的所有币种
 	// 设置优雅退出
 	sigChan := make(chan os.Signal, 1)

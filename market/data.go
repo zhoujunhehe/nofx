@@ -4,11 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"math"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"nofx/market/kline"
 )
 
 // FundingRateCache 资金费率缓存结构
@@ -26,20 +29,45 @@ var (
 // Get 获取指定代币的市场数据
 func Get(symbol string) (*Data, error) {
 	var klines3m, klines4h []Kline
-	var err error
 	// 标准化symbol
 	symbol = Normalize(symbol)
-	// 获取3分钟K线数据 (最近10个)
-	klines3m, err = WSMonitorCli.GetCurrentKlines(symbol, "3m") // 多获取一些用于计算
-	if err != nil {
-		return nil, fmt.Errorf("获取3分钟K线失败: %v", err)
+	if kline.Default == nil {
+		return nil, fmt.Errorf("kline service not initialized")
 	}
-
-	// 获取4小时K线数据 (最近10个)
-	klines4h, err = WSMonitorCli.GetCurrentKlines(symbol, "4h") // 多获取用于计算指标
-	if err != nil {
-		return nil, fmt.Errorf("获取4小时K线失败: %v", err)
+	// Ensure subscribed and ready
+	_ = kline.Default.AddSymbols([]string{symbol})
+	kline.Default.EnsureReady(symbol, "3m", 100)
+	kline.Default.EnsureReady(symbol, "4h", 100)
+	// fetch from kline service
+	convert := func(in []kline.Kline) []Kline {
+		out := make([]Kline, len(in))
+		for i, v := range in {
+			out[i] = Kline{
+				OpenTime:            v.OpenTime,
+				Open:                v.Open,
+				High:                v.High,
+				Low:                 v.Low,
+				Close:               v.Close,
+				Volume:              v.Volume,
+				CloseTime:           v.CloseTime,
+				QuoteVolume:         v.QuoteVolume,
+				Trades:              v.Trades,
+				TakerBuyBaseVolume:  v.TakerBuyBaseVolume,
+				TakerBuyQuoteVolume: v.TakerBuyQuoteVolume,
+			}
+		}
+		return out
 	}
+	k3, ok3 := kline.Default.GetRecentKlines(symbol, "3m", 100)
+	if !ok3 || len(k3) == 0 {
+		log.Printf("Warning: kline 3m for %s not ready", symbol)
+	}
+	klines3m = convert(k3)
+	k4, ok4 := kline.Default.GetRecentKlines(symbol, "4h", 100)
+	if !ok4 || len(k4) == 0 {
+		log.Printf("Warning: kline 4h for %s not ready", symbol)
+	}
+	klines4h = convert(k4)
 
 	// 检查数据是否为空
 	if len(klines3m) == 0 {
