@@ -3,10 +3,10 @@
 [![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat&logo=go)](https://golang.org/)
 [![React](https://img.shields.io/badge/React-18+-61DAFB?style=flat&logo=react)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?style=flat&logo=typescript)](https://www.typescriptlang.org/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
 [![Backed by Amber.ac](https://img.shields.io/badge/Backed%20by-Amber.ac-orange.svg)](https://amber.ac)
 
-**Мови / Languages:** [English](../../../README.md) | [中文](../zh-CN/README.md) | [Українська](../uk/README.md) | [Русский](../ru/README.md)
+**Мови / Languages:** [English](../../../README.md) | [中文](../zh-CN/README.md) | [Українська](../uk/README.md) | [Русский](../ru/README.md) | [日本語](../ja/README.md)
 
 **Офіційний Twitter:** [@nofx_ai](https://x.com/nofx_ai)
 
@@ -288,7 +288,7 @@ Docker автоматично обробляє всі залежності (Go, 
 #### Крок 1: Підготуйте конфігурацію
 ```bash
 # Скопіюйте шаблон конфігурації
-cp config.example.jsonc config.json
+cp config.json.example config.json
 
 # Відредагуйте та заповніть ваші API ключі
 nano config.json  # або використайте будь-який редактор
@@ -323,6 +323,7 @@ docker compose up -d --build
 - **Українська**: Дивіться документацію Docker (скоро буде доступно)
 - **English**: See [DOCKER_DEPLOY.en.md](DOCKER_DEPLOY.en.md)
 - **中文**: 查看 [DOCKER_DEPLOY.md](DOCKER_DEPLOY.md)
+- **日本語**: [DOCKER_DEPLOY.ja.md](DOCKER_DEPLOY.ja.md)を参照
 
 ---
 
@@ -426,7 +427,7 @@ cd ..
 **Крок 1**: Скопіюйте та перейменуйте файл прикладу конфігурації
 
 ```bash
-cp config.example.jsonc config.json
+cp config.json.example config.json
 ```
 
 **Крок 2**: Відредагуйте `config.json` та заповніть ваші API ключі
@@ -561,9 +562,9 @@ cp config.example.jsonc config.json
       "ai_model": "deepseek",
       "exchange": "aster",
 
-      "aster_user": "0x63DD5aCC6b1aa0f563956C0e534DD30B6dcF7C4e",
-      "aster_signer": "0x21cF8Ae13Bb72632562c6Fff438652Ba1a151bb0",
-      "aster_private_key": "4fd0a42218f3eae43a6ce26d22544e986139a01e5b34a62db53757ffca81bae1",
+      "aster_user": "0xYOUR_MAIN_WALLET_ADDRESS_HERE",
+      "aster_signer": "0xYOUR_API_WALLET_SIGNER_ADDRESS_HERE",
+      "aster_private_key": "your_api_wallet_private_key_without_0x_prefix",
 
       "deepseek_key": "sk-xxxxxxxxxxxxx",
       "initial_balance": 1000.0,
