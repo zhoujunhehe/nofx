@@ -40,7 +40,9 @@ func TestRestReconciler_ReconcileWindow_Success(t *testing.T) {
 	}
 
 	// Test reconcile
-	reconciler.ReconcileWindow("BTCUSDT", "1m", 5)
+	if err := reconciler.ReconcileWindow("BTCUSDT", "1m", 5); err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
 
 	// Verify data was stored
 	count := store.getFinalCount("BTCUSDT", "1m")
@@ -94,11 +96,11 @@ func TestRestReconciler_ReconcileWindow_RateLimitExceeded(t *testing.T) {
 	// this test will hang. So we skip the actual call and just verify the setup.
 	// In practice, rate limiting should be handled by proper bucket configuration.
 	// This test serves as documentation that rate limit errors are handled gracefully.
-	
+
 	// Note: In a real scenario, you would configure the bucket with appropriate
 	// capacity and refill rate to prevent blocking. This test demonstrates that
 	// the reconciler structure is set up correctly with rate limiting.
-	
+
 	// Verify reconciler is set up correctly
 	if reconciler.rate == nil {
 		t.Fatal("expected rate governor to be set")
@@ -135,8 +137,11 @@ func TestRestReconciler_ReconcileWindow_HTTPError(t *testing.T) {
 		}),
 	}
 
-	// Test reconcile - should fail silently due to HTTP error
-	reconciler.ReconcileWindow("BTCUSDT", "1m", 5)
+	// Test reconcile - should return error due to HTTP error
+	err := reconciler.ReconcileWindow("BTCUSDT", "1m", 5)
+	if err == nil {
+		t.Error("expected error for HTTP 500, got nil")
+	}
 
 	// Verify no data was stored
 	count := store.getFinalCount("BTCUSDT", "1m")
@@ -170,8 +175,11 @@ func TestRestReconciler_ReconcileWindow_NilStore(t *testing.T) {
 		}),
 	}
 
-	// Test reconcile - should return early without error
-	reconciler.ReconcileWindow("BTCUSDT", "1m", 5)
+	// Test reconcile - should return early without error (nil store)
+	err := reconciler.ReconcileWindow("BTCUSDT", "1m", 5)
+	if err != nil {
+		t.Errorf("expected no error for nil store, got %v", err)
+	}
 
 	// Should not panic or error
 }
@@ -203,8 +211,11 @@ func TestRestReconciler_ReconcileWindow_EmptyResponse(t *testing.T) {
 		}),
 	}
 
-	// Test reconcile
-	reconciler.ReconcileWindow("BTCUSDT", "1m", 5)
+	// Test reconcile - empty response is valid, should not error
+	err := reconciler.ReconcileWindow("BTCUSDT", "1m", 5)
+	if err != nil {
+		t.Errorf("expected no error for empty response, got %v", err)
+	}
 
 	// Verify no data was stored (empty response)
 	count := store.getFinalCount("BTCUSDT", "1m")
@@ -242,9 +253,15 @@ func TestRestReconciler_ReconcileWindow_MultipleSymbols(t *testing.T) {
 	}
 
 	// Test reconcile multiple symbols
-	reconciler.ReconcileWindow("BTCUSDT", "1m", 3)
-	reconciler.ReconcileWindow("ETHUSDT", "3m", 3)
-	reconciler.ReconcileWindow("BTCUSDT", "4h", 3)
+	if err := reconciler.ReconcileWindow("BTCUSDT", "1m", 3); err != nil {
+		t.Fatalf("failed to reconcile BTCUSDT 1m: %v", err)
+	}
+	if err := reconciler.ReconcileWindow("ETHUSDT", "3m", 3); err != nil {
+		t.Fatalf("failed to reconcile ETHUSDT 3m: %v", err)
+	}
+	if err := reconciler.ReconcileWindow("BTCUSDT", "4h", 3); err != nil {
+		t.Fatalf("failed to reconcile BTCUSDT 4h: %v", err)
+	}
 
 	// Verify data was stored for each symbol/interval
 	if count := store.getFinalCount("BTCUSDT", "1m"); count != 3 {

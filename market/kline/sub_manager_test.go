@@ -71,7 +71,8 @@ func (m *mockWSClient) reset() {
 
 func TestSubManager_AddSymbols(t *testing.T) {
 	client := newMockWSClient()
-	sm := NewSubManager(client)
+	sm := NewSubManager()
+	sm.SetClient("1m", client)
 
 	// Test adding symbols
 	added, err := sm.AddSymbols("1m", []string{"BTCUSDT", "ETHUSDT"})
@@ -125,7 +126,8 @@ func TestSubManager_AddSymbols(t *testing.T) {
 
 func TestSubManager_AddSymbols_EmptyInput(t *testing.T) {
 	client := newMockWSClient()
-	sm := NewSubManager(client)
+	sm := NewSubManager()
+	sm.SetClient("1m", client)
 
 	// Test empty symbols
 	added, err := sm.AddSymbols("1m", []string{})
@@ -150,7 +152,8 @@ func TestSubManager_AddSymbols_RollbackOnError(t *testing.T) {
 	client := newMockWSClient()
 	client.shouldFail = true
 	client.failOnCall = 1 // Fail on first call
-	sm := NewSubManager(client)
+	sm := NewSubManager()
+	sm.SetClient("1m", client)
 
 	// Try to add symbols (should fail)
 	added, err := sm.AddSymbols("1m", []string{"BTCUSDT", "ETHUSDT"})
@@ -170,7 +173,8 @@ func TestSubManager_AddSymbols_RollbackOnError(t *testing.T) {
 
 func TestSubManager_RemoveSymbols(t *testing.T) {
 	client := newMockWSClient()
-	sm := NewSubManager(client)
+	sm := NewSubManager()
+	sm.SetClient("1m", client)
 
 	// First add some symbols
 	_, err := sm.AddSymbols("1m", []string{"BTCUSDT", "ETHUSDT", "BNBUSDT"})
@@ -205,7 +209,8 @@ func TestSubManager_RemoveSymbols(t *testing.T) {
 
 func TestSubManager_RemoveSymbols_RollbackOnError(t *testing.T) {
 	client := newMockWSClient()
-	sm := NewSubManager(client)
+	sm := NewSubManager()
+	sm.SetClient("1m", client)
 
 	// First add some symbols
 	_, err := sm.AddSymbols("1m", []string{"BTCUSDT", "ETHUSDT"})
@@ -238,7 +243,8 @@ func TestSubManager_RemoveSymbols_RollbackOnError(t *testing.T) {
 
 func TestSubManager_Sync(t *testing.T) {
 	client := newMockWSClient()
-	sm := NewSubManager(client)
+	sm := NewSubManager()
+	sm.SetClient("1m", client)
 
 	// Initial state: add some symbols
 	_, err := sm.AddSymbols("1m", []string{"BTCUSDT", "ETHUSDT"})
@@ -275,7 +281,8 @@ func TestSubManager_Sync(t *testing.T) {
 
 func TestSubManager_Sync_NoChanges(t *testing.T) {
 	client := newMockWSClient()
-	sm := NewSubManager(client)
+	sm := NewSubManager()
+	sm.SetClient("1m", client)
 
 	// Initial state
 	_, err := sm.AddSymbols("1m", []string{"BTCUSDT", "ETHUSDT"})
@@ -298,7 +305,8 @@ func TestSubManager_Sync_NoChanges(t *testing.T) {
 
 func TestSubManager_Sync_InvalidInterval(t *testing.T) {
 	client := newMockWSClient()
-	sm := NewSubManager(client)
+	sm := NewSubManager()
+	sm.SetClient("1m", client)
 
 	added, removed, err := sm.Sync("", []string{"BTCUSDT"})
 	if err == nil {
@@ -311,7 +319,8 @@ func TestSubManager_Sync_InvalidInterval(t *testing.T) {
 
 func TestSubManager_Symbols(t *testing.T) {
 	client := newMockWSClient()
-	sm := NewSubManager(client)
+	sm := NewSubManager()
+	sm.SetClient("1m", client)
 
 	// Empty interval
 	symbols := sm.Symbols("1m")
@@ -340,7 +349,8 @@ func TestSubManager_Symbols(t *testing.T) {
 
 func TestSubManager_StreamsFor(t *testing.T) {
 	client := newMockWSClient()
-	sm := NewSubManager(client)
+	sm := NewSubManager()
+	sm.SetClient("1m", client)
 
 	// Add symbols
 	_, err := sm.AddSymbols("1m", []string{"BTCUSDT", "ETHUSDT"})
@@ -366,7 +376,8 @@ func TestSubManager_StreamsFor(t *testing.T) {
 
 func TestSubManager_Has(t *testing.T) {
 	client := newMockWSClient()
-	sm := NewSubManager(client)
+	sm := NewSubManager()
+	sm.SetClient("1m", client)
 
 	// Add symbol
 	_, err := sm.AddSymbols("1m", []string{"BTCUSDT"})
@@ -398,7 +409,8 @@ func TestSubManager_Has(t *testing.T) {
 
 func TestSubManager_Count(t *testing.T) {
 	client := newMockWSClient()
-	sm := NewSubManager(client)
+	sm := NewSubManager()
+	sm.SetClient("1m", client)
 
 	// Empty interval
 	if count := sm.Count("1m"); count != 0 {
@@ -427,8 +439,11 @@ func TestSubManager_Count(t *testing.T) {
 }
 
 func TestSubManager_All(t *testing.T) {
-	client := newMockWSClient()
-	sm := NewSubManager(client)
+	client1m := newMockWSClient()
+	client5m := newMockWSClient()
+	sm := NewSubManager()
+	sm.SetClient("1m", client1m)
+	sm.SetClient("5m", client5m)
 
 	// Add symbols to multiple intervals
 	_, err := sm.AddSymbols("1m", []string{"BTCUSDT", "ETHUSDT"})
@@ -483,7 +498,8 @@ func TestSubManager_All(t *testing.T) {
 
 func TestSubManager_Batching(t *testing.T) {
 	client := newMockWSClient()
-	sm := NewSubManager(client)
+	sm := NewSubManager()
+	sm.SetClient("1m", client)
 
 	// Create more than maxBatch symbols (each unique)
 	symbols := make([]string, 200)
@@ -504,15 +520,15 @@ func TestSubManager_Batching(t *testing.T) {
 	}
 
 	// Verify subscribe was called multiple times (batched)
-	// Since maxBatch is 150, 200 symbols should be split into 2 batches
+	// Since maxBatch is 50, 200 symbols should be split into 4 batches
 	client.mu.Lock()
 	callCount := client.callCount
 	streamsCount := len(client.subscribeCalls)
 	client.mu.Unlock()
 
-	// Should have been called twice (150 + 50)
-	if callCount != 2 {
-		t.Fatalf("expected SubscribeStreams to be called 2 times (batched), got %d", callCount)
+	// Should have been called 4 times (50 + 50 + 50 + 50)
+	if callCount != 4 {
+		t.Fatalf("expected SubscribeStreams to be called 4 times (batched), got %d", callCount)
 	}
 	// All 200 streams should have been subscribed
 	if streamsCount != 200 {
@@ -521,8 +537,11 @@ func TestSubManager_Batching(t *testing.T) {
 }
 
 func TestSubManager_MultipleIntervals(t *testing.T) {
-	client := newMockWSClient()
-	sm := NewSubManager(client)
+	client1m := newMockWSClient()
+	client5m := newMockWSClient()
+	sm := NewSubManager()
+	sm.SetClient("1m", client1m)
+	sm.SetClient("5m", client5m)
 
 	// Add symbols to different intervals
 	_, err := sm.AddSymbols("1m", []string{"BTCUSDT"})
@@ -558,7 +577,8 @@ func TestSubManager_MultipleIntervals(t *testing.T) {
 
 func TestSubManager_ConcurrentAccess(t *testing.T) {
 	client := newMockWSClient()
-	sm := NewSubManager(client)
+	sm := NewSubManager()
+	sm.SetClient("1m", client)
 
 	// Concurrent adds
 	var wg sync.WaitGroup

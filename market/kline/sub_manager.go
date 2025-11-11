@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"time"
 )
 
 type wsClient interface {
@@ -15,22 +16,41 @@ type wsClient interface {
 }
 
 // SubManager manages dynamic subscription/unsubscription of kline streams (maintains symbol sets per interval)
+// Each interval uses a separate WebSocket client to avoid exceeding the 1024 streams per connection limit
 type SubManager struct {
-	c  wsClient
-	mu sync.RWMutex
+	// interval(lower) -> wsClient (each interval has its own WebSocket connection)
+	clients map[string]wsClient
+	mu      sync.RWMutex
 	// interval(lower) -> set(symbol UPPER)
 	subs map[string]map[string]struct{}
 	// Maximum number of streams per control message (avoid params being too long at once)
 	maxBatch int
 }
 
-func NewSubManager(c wsClient) *SubManager {
+func NewSubManager() *SubManager {
 	return &SubManager{
-		c: c,
-		// 100~200 is generally safe; Spot/USDM control messages also have rate limits handled internally by wsClient
-		maxBatch: 150,
+		clients: make(map[string]wsClient),
+		// Use smaller batch size (50) to avoid Binance "Invalid request" policy violations.
+		// Binance may reject SUBSCRIBE requests with too many streams in a single message.
+		maxBatch: 50,
 		subs:     make(map[string]map[string]struct{}),
 	}
+}
+
+// SetClient sets the WebSocket client for a specific interval
+func (sm *SubManager) SetClient(interval string, c wsClient) {
+	iv := strings.ToLower(strings.TrimSpace(interval))
+	sm.mu.Lock()
+	sm.clients[iv] = c
+	sm.mu.Unlock()
+}
+
+// GetClient returns the WebSocket client for a specific interval
+func (sm *SubManager) GetClient(interval string) wsClient {
+	iv := strings.ToLower(strings.TrimSpace(interval))
+	sm.mu.RLock()
+	defer sm.mu.RUnlock()
+	return sm.clients[iv]
 }
 
 // -------- Public API --------
@@ -63,9 +83,20 @@ func (sm *SubManager) AddSymbols(interval string, symbols []string) ([]string, e
 		return nil, nil
 	}
 
+	// Get client for this interval
+	c := sm.GetClient(iv)
+	if c == nil {
+		sm.mu.Lock()
+		for _, su := range toAdd {
+			delete(set, su)
+		}
+		sm.mu.Unlock()
+		return nil, fmt.Errorf("no WebSocket client for interval %s", iv)
+	}
+
 	// Send subscription (batched), rollback on failure
 	streams := sm.buildStreams(iv, toAdd)
-	if err := sm.callBatched(sm.c.SubscribeStreams, streams); err != nil {
+	if err := sm.callBatched(c.SubscribeStreams, streams); err != nil {
 		// Rollback
 		sm.mu.Lock()
 		set = sm.ensure(iv)
@@ -106,8 +137,19 @@ func (sm *SubManager) RemoveSymbols(interval string, symbols []string) ([]string
 		return nil, nil
 	}
 
+	// Get client for this interval
+	c := sm.GetClient(iv)
+	if c == nil {
+		sm.mu.Lock()
+		for _, su := range toRemove {
+			set[su] = struct{}{}
+		}
+		sm.mu.Unlock()
+		return nil, fmt.Errorf("no WebSocket client for interval %s", iv)
+	}
+
 	streams := sm.buildStreams(iv, toRemove)
-	if err := sm.callBatched(sm.c.UnsubscribeStreams, streams); err != nil {
+	if err := sm.callBatched(c.UnsubscribeStreams, streams); err != nil {
 		// Rollback
 		sm.mu.Lock()
 		set = sm.ensure(iv)
@@ -274,6 +316,7 @@ func (sm *SubManager) callBatched(fn func([]string) error, streams []string) err
 		if err := fn(streams[i:j]); err != nil {
 			return err
 		}
+		time.Sleep(500 * time.Millisecond)
 	}
 	return nil
 }

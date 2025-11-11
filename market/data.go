@@ -36,8 +36,6 @@ func Get(symbol string) (*Data, error) {
 	}
 	// Ensure subscribed and ready
 	_ = kline.Default.AddSymbols([]string{symbol})
-	kline.Default.EnsureReady(symbol, "3m", 100)
-	kline.Default.EnsureReady(symbol, "4h", 100)
 	// fetch from kline service
 	convert := func(in []kline.Kline) []Kline {
 		out := make([]Kline, len(in))

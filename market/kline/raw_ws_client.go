@@ -26,6 +26,11 @@ const (
 	// Control message rate limit (SUB/UNSUB)
 	// Spot 5 msg/s; USDM 10 msg/s. Here uses a conservative value, adjust as needed.
 	WSCtrlMsgsPerSec = 5
+
+	// Maximum streams per SUBSCRIBE/UNSUBSCRIBE request
+	// Binance may reject requests with too many streams (policy violation).
+	// A smaller batch size (50) is safer to avoid "Invalid request" errors.
+	WSSubscribeBatchSize = 50
 )
 
 type RawWSClient struct {
@@ -156,6 +161,11 @@ func (c *RawWSClient) readLoop(done chan struct{}) {
 	defer close(done)
 
 	for {
+		// Check if closed before attempting to read
+		if c.closed.Load() {
+			return
+		}
+
 		c.mu.RLock()
 		conn := c.conn
 		c.mu.RUnlock()
@@ -168,9 +178,17 @@ func (c *RawWSClient) readLoop(done chan struct{}) {
 			}
 		}
 
+		// Check closed again before blocking read
+		if c.closed.Load() {
+			return
+		}
+
 		_, message, err := conn.ReadMessage()
 		if err != nil {
-			log.Printf("[WS] read error: %v", err)
+			// If closed, don't log error (expected)
+			if !c.closed.Load() {
+				log.Printf("[WS] read error: %v", err)
+			}
 			return
 		}
 		// Successfully read message, refresh read deadline
@@ -369,33 +387,45 @@ func (c *RawWSClient) routeKline(payload []byte, streamName string) {
 }
 
 // resubscribeAll restores wantSubs after connection rebuild, batched + rate limited
+// Groups streams by interval for better log readability
 func (c *RawWSClient) resubscribeAll() {
 	c.mu.RLock()
 	if c.conn == nil {
 		c.mu.RUnlock()
 		return
 	}
-	// Copy current wantSubs
-	list := make([]string, 0, len(c.wantSubs))
+	// Copy current wantSubs and group by interval
+	byInterval := make(map[string][]string)
 	for s := range c.wantSubs {
-		list = append(list, s)
+		// Extract interval from stream name (e.g., "btcusdt@kline_1m" -> "1m")
+		parts := strings.Split(s, "@kline_")
+		if len(parts) != 2 {
+			// Invalid format, add to a catch-all group
+			byInterval[""] = append(byInterval[""], s)
+			continue
+		}
+		interval := parts[1]
+		byInterval[interval] = append(byInterval[interval], s)
 	}
 	c.mu.RUnlock()
 
-	if len(list) == 0 {
+	if len(byInterval) == 0 {
 		return
 	}
 
-	// Send in batches to prevent too many params at once; 100 per batch is safe
-	const batch = 100
-	for i := 0; i < len(list); i += batch {
-		j := i + batch
-		if j > len(list) {
-			j = len(list)
-		}
-		if err := c.SubscribeStreams(list[i:j]); err != nil {
-			log.Printf("[WS] resubscribe batch failed: %v", err)
-			// Don't return immediately on failure, let upper layer retry or wait for next reconnection
+	// Send grouped by interval, then batched within each interval
+	for interval, streams := range byInterval {
+		for i := 0; i < len(streams); i += WSSubscribeBatchSize {
+			j := i + WSSubscribeBatchSize
+			if j > len(streams) {
+				j = len(streams)
+			}
+			if err := c.SubscribeStreams(streams[i:j]); err != nil {
+				log.Printf("[WS] resubscribe batch failed (interval=%s): %v", interval, err)
+				// Don't return immediately on failure, let upper layer retry or wait for next reconnection
+			}
+			// Add delay between batches to avoid rate limiting
+			time.Sleep(500 * time.Millisecond)
 		}
 	}
 }
@@ -408,17 +438,20 @@ func (c *RawWSClient) Close() {
 	close(c.done)
 
 	c.mu.Lock()
+	// Close subscription channels first (so consumeLoop can exit)
+	for k, ch := range c.subs {
+		close(ch)
+		delete(c.subs, k)
+	}
+	// Then close connection (this will unblock ReadMessage())
 	if c.conn != nil {
+		// Set read deadline to past to unblock ReadMessage() immediately
+		_ = c.conn.SetReadDeadline(time.Now().Add(-time.Second))
 		_ = c.conn.WriteControl(websocket.CloseMessage,
 			websocket.FormatCloseMessage(websocket.CloseNormalClosure, "bye"),
 			time.Now().Add(2*time.Second))
 		_ = c.conn.Close()
 		c.conn = nil
-	}
-	// Close subscription channels
-	for k, ch := range c.subs {
-		close(ch)
-		delete(c.subs, k)
 	}
 	c.mu.Unlock()
 
