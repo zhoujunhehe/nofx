@@ -21,7 +21,7 @@ func TestUserIPMapperBasic(t *testing.T) {
 
 	stor := storage.NewFileStorage(storage.FileStorageConfig{
 		FilePath:      tempFile,
-		FlushInterval: 100 * time.Millisecond,  // 缩短刷新间隔便于测试
+		FlushInterval: 100 * time.Millisecond, // 缩短刷新间隔便于测试
 	})
 
 	m := NewUserIPMapper(stor)

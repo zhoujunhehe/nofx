@@ -17,6 +17,7 @@ services:
       - ./prompts:/app/prompts
       - ./secrets:/app/secrets:ro  # RSA密钥文件
       - /etc/localtime:/etc/localtime:ro  # Sync host time
+      - ./data:/app/data  # Proxy user mapping data
     environment:
       - TZ=${NOFX_TIMEZONE:-Asia/Shanghai}  # Set timezone
       - AI_MAX_TOKENS=4000  # AI响应的最大token数（默认2000，建议4000-8000）

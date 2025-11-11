@@ -94,9 +94,9 @@ func TestGetProxyClientForUser(t *testing.T) {
 		Mode:          "pool",
 		ProxyList:     []string{"http://127.0.0.1:7890", "http://127.0.0.1:7891"},
 		Timeout:       30 * time.Second,
-		ProxyHost:     "127.0.0.1:8080",  // 设置代理主机
-		ProxyUser:     "user-%s",          // 使用%s占位符
-		ProxyPassword: "testpass",         // 设置密码
+		ProxyHost:     "127.0.0.1:8080", // 设置代理主机
+		ProxyUser:     "user-%s",        // 使用%s占位符
+		ProxyPassword: "testpass",       // 设置密码
 	}
 
 	manager, err := NewProxyManager(config)
@@ -210,7 +210,7 @@ func TestGetProxyClientConcurrent(t *testing.T) {
 		ProxyList:     []string{"http://127.0.0.1:7890", "http://127.0.0.1:7891", "http://127.0.0.1:7892"},
 		Timeout:       30 * time.Second,
 		ProxyHost:     "127.0.0.1:8080",
-		ProxyUser:     "user-%s",  // 使用%s占位符
+		ProxyUser:     "user-%s", // 使用%s占位符
 		ProxyPassword: "testpass",
 	}
 
@@ -279,7 +279,7 @@ func TestMappingPersistence(t *testing.T) {
 		Timeout:       30 * time.Second,
 		MappingFile:   "/tmp/test_mapping_persistence.json",
 		ProxyHost:     "127.0.0.1:8080",
-		ProxyUser:     "user-%s",  // 使用%s占位符
+		ProxyUser:     "user-%s", // 使用%s占位符
 		ProxyPassword: "testpass",
 	}
 

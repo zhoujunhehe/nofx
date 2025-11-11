@@ -34,7 +34,7 @@ func TestProxyIPProxyURL(t *testing.T) {
 				IP:       "192.168.1.1",
 				Protocol: "http",
 			},
-			expected: "192.168.1.1",  // 没有Host时直接返回IP
+			expected: "192.168.1.1", // 没有Host时直接返回IP
 		},
 		{
 			name: "直接URL",
@@ -57,7 +57,7 @@ func TestProxyIPProxyURL(t *testing.T) {
 
 	// 测试使用Host和Username的情况（含%s占位符）
 	Host = "proxy.example.com"
-	Username = "user-%s"  // 使用%s占位符
+	Username = "user-%s" // 使用%s占位符
 	Password = "pass123"
 
 	ip := ProxyIP{

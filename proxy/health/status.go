@@ -33,11 +33,11 @@ func (s HealthStatus) String() string {
 
 // IPHealth IP健康信息
 type IPHealth struct {
-	IP                  string        // IP地址
-	Status              HealthStatus  // 当前状态
-	ConsecutiveFailures int           // 连续失败次数
-	LastCheckTime       time.Time     // 最后检查时间
-	LastError           string        // 最后一次错误信息
+	IP                  string       // IP地址
+	Status              HealthStatus // 当前状态
+	ConsecutiveFailures int          // 连续失败次数
+	LastCheckTime       time.Time    // 最后检查时间
+	LastError           string       // 最后一次错误信息
 }
 
 // IsHealthy 是否健康（可用于分配）

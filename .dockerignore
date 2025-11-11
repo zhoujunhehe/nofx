@@ -36,6 +36,7 @@ docs/
 decision_logs/
 coin_pool_cache/
 *.log
+data/
 
 # Config files (should be mounted)
 config.json

@@ -312,7 +312,7 @@ func (hc *HealthChecker) testProxyConnection(proxy provider.ProxyIP, targetURL s
 		Transport: &http.Transport{
 			Proxy: http.ProxyURL(parsedProxyURL),
 		},
-		Timeout:   hc.config.Timeout,
+		Timeout: hc.config.Timeout,
 	}
 
 	// 3. 创建请求
@@ -444,7 +444,6 @@ func (hc *HealthChecker) transitionToBlacklisted(health *IPHealth) {
 		}
 	}
 }
-
 
 // ============ 内部实现 - 事件触发 ============
 
