@@ -3,17 +3,10 @@
 
 [build]
 # 使用自定义的 Railway Dockerfile
-builder = "dockerfile"
+builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile.railway"
 
 [deploy]
-# 启动命令（Dockerfile 中已定义，这里可省略）
-# startCommand = "/app/start.sh"
-
-# 健康检查路径
+# 健康检查
 healthcheckPath = "/api/health"
 healthcheckTimeout = 100
-
-# 重启策略
-restartPolicyType = "on-failure"
-restartPolicyMaxRetries = 10
