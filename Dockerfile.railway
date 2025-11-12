@@ -105,8 +105,10 @@ RUN mkdir -p /app/decision_logs /app/secrets /run/nginx
 # Set permissions
 RUN chmod +x /app/nofx
 
-# Create startup script
+# Create startup script with proper process management
 RUN echo '#!/bin/sh' > /app/start.sh && \
+    echo 'set -e' >> /app/start.sh && \
+    echo '' >> /app/start.sh && \
     echo 'echo "🚀 Starting NOFX AI Trading System on Railway..."' >> /app/start.sh && \
     echo 'echo "📡 Frontend Port: 3000"' >> /app/start.sh && \
     echo 'echo "🔧 Backend Port: 8080"' >> /app/start.sh && \
@@ -117,19 +119,32 @@ RUN echo '#!/bin/sh' > /app/start.sh && \
     echo 'echo "📁 Creating necessary directories..."' >> /app/start.sh && \
     echo 'mkdir -p /app/decision_logs' >> /app/start.sh && \
     echo '' >> /app/start.sh && \
-    echo 'echo "🌐 Starting Nginx on port 3000..."' >> /app/start.sh && \
-    echo 'nginx' >> /app/start.sh && \
+    echo 'echo "🤖 Starting Backend in background..."' >> /app/start.sh && \
+    echo '/app/nofx &' >> /app/start.sh && \
+    echo 'BACKEND_PID=$!' >> /app/start.sh && \
+    echo 'echo "Backend PID: $BACKEND_PID"' >> /app/start.sh && \
     echo '' >> /app/start.sh && \
-    echo 'echo "🤖 Starting Backend on port 8080..."' >> /app/start.sh && \
-    echo 'exec /app/nofx' >> /app/start.sh && \
+    echo '# Wait for backend to be ready' >> /app/start.sh && \
+    echo 'echo "⏳ Waiting for backend to start..."' >> /app/start.sh && \
+    echo 'for i in 1 2 3 4 5 6 7 8 9 10; do' >> /app/start.sh && \
+    echo '  if wget -q -O /dev/null http://localhost:8080/api/health 2>/dev/null; then' >> /app/start.sh && \
+    echo '    echo "✅ Backend is ready!"' >> /app/start.sh && \
+    echo '    break' >> /app/start.sh && \
+    echo '  fi' >> /app/start.sh && \
+    echo '  echo "Waiting... ($i/10)"' >> /app/start.sh && \
+    echo '  sleep 2' >> /app/start.sh && \
+    echo 'done' >> /app/start.sh && \
+    echo '' >> /app/start.sh && \
+    echo 'echo "🌐 Starting Nginx on port 3000..."' >> /app/start.sh && \
+    echo 'exec nginx -g "daemon off;"' >> /app/start.sh && \
     chmod +x /app/start.sh
 
 # Expose port 3000 for Railway (Nginx frontend)
 EXPOSE 3000
 
-# Health check
+# Health check (check frontend port 3000)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-  CMD curl -f http://localhost:8080/api/health || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
 
 # Start both Nginx and Backend
 CMD ["/app/start.sh"]
