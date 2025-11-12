@@ -96,8 +96,9 @@ COPY prompts ./prompts
 # Copy frontend build to Nginx html directory
 COPY --from=frontend-builder /build/dist /usr/share/nginx/html
 
-# Copy Railway-specific Nginx configuration
-COPY nginx/nginx-railway.conf /etc/nginx/conf.d/default.conf
+# Remove default Nginx config and copy Railway-specific configuration
+RUN rm -f /etc/nginx/http.d/default.conf /etc/nginx/conf.d/default.conf
+COPY nginx/nginx-railway.conf /etc/nginx/http.d/default.conf
 
 # Create necessary directories
 RUN mkdir -p /app/decision_logs /app/secrets /run/nginx
@@ -114,7 +115,7 @@ RUN echo '#!/bin/sh' > /app/start.sh && \
     echo 'echo "🔧 Backend Port: 8080"' >> /app/start.sh && \
     echo '' >> /app/start.sh && \
     echo '# Update Nginx to listen on port 3000' >> /app/start.sh && \
-    echo 'sed -i "s/listen 80;/listen 3000;/" /etc/nginx/conf.d/default.conf' >> /app/start.sh && \
+    echo 'sed -i "s/listen 80;/listen 3000;/" /etc/nginx/http.d/default.conf' >> /app/start.sh && \
     echo '' >> /app/start.sh && \
     echo 'echo "📁 Creating necessary directories..."' >> /app/start.sh && \
     echo 'mkdir -p /app/decision_logs' >> /app/start.sh && \
