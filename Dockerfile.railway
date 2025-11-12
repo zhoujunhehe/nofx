@@ -105,29 +105,27 @@ RUN mkdir -p /app/decision_logs /app/secrets /run/nginx
 # Set permissions
 RUN chmod +x /app/nofx
 
-# Create startup script that handles Railway's PORT environment variable
+# Create startup script
 RUN echo '#!/bin/sh' > /app/start.sh && \
     echo 'echo "🚀 Starting NOFX AI Trading System on Railway..."' >> /app/start.sh && \
+    echo 'echo "📡 Frontend Port: 3000"' >> /app/start.sh && \
+    echo 'echo "🔧 Backend Port: 8080"' >> /app/start.sh && \
     echo '' >> /app/start.sh && \
-    echo '# Use Railway PORT or default to 8080' >> /app/start.sh && \
-    echo 'export PORT=${PORT:-8080}' >> /app/start.sh && \
-    echo 'echo "📡 Port: $PORT"' >> /app/start.sh && \
-    echo '' >> /app/start.sh && \
-    echo '# Update Nginx to listen on Railway PORT' >> /app/start.sh && \
-    echo 'sed -i "s/listen 80;/listen $PORT;/" /etc/nginx/conf.d/default.conf' >> /app/start.sh && \
+    echo '# Update Nginx to listen on port 3000' >> /app/start.sh && \
+    echo 'sed -i "s/listen 80;/listen 3000;/" /etc/nginx/conf.d/default.conf' >> /app/start.sh && \
     echo '' >> /app/start.sh && \
     echo 'echo "📁 Creating necessary directories..."' >> /app/start.sh && \
     echo 'mkdir -p /app/decision_logs' >> /app/start.sh && \
     echo '' >> /app/start.sh && \
-    echo 'echo "🌐 Starting Nginx on port $PORT..."' >> /app/start.sh && \
+    echo 'echo "🌐 Starting Nginx on port 3000..."' >> /app/start.sh && \
     echo 'nginx' >> /app/start.sh && \
     echo '' >> /app/start.sh && \
     echo 'echo "🤖 Starting Backend on port 8080..."' >> /app/start.sh && \
     echo 'exec /app/nofx' >> /app/start.sh && \
     chmod +x /app/start.sh
 
-# Expose default port (Railway will override with PORT env var)
-EXPOSE 8080
+# Expose port 3000 for Railway (Nginx frontend)
+EXPOSE 3000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
