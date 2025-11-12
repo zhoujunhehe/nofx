@@ -315,7 +315,45 @@ Before using this system, you need a Binance Futures account. **Use our referral
 
 ## 🚀 Quick Start
 
-### 🐳 Option A: Docker One-Click Deployment (EASIEST - Recommended!)
+### ☁️ Option A: Railway Cloud Deployment (FASTEST - No Installation!)
+
+**⚡ Deploy to the cloud in 10 minutes - Zero local setup required!**
+
+Railway handles everything: hosting, SSL, automatic updates, and scaling.
+
+#### Quick Steps:
+
+1. **Generate Keys**
+   ```bash
+   # Clone the repo
+   git clone https://github.com/NoFxAiOS/nofx.git
+   cd nofx
+
+   # Generate encryption keys
+   chmod +x scripts/generate_railway_keys.sh
+   ./scripts/generate_railway_keys.sh
+   ```
+
+2. **Deploy to Railway**
+   - Visit [railway.app](https://railway.app/)
+   - Connect your GitHub fork
+   - Add environment variables (shown by the script)
+   - Deploy!
+
+**📖 For complete Railway deployment guide:**
+- **小白指南**: [docs/getting-started/railway-deploy-beginner.zh-CN.md](docs/getting-started/railway-deploy-beginner.zh-CN.md) ⭐
+- **Technical**: [docs/getting-started/railway-deploy.zh-CN.md](docs/getting-started/railway-deploy.zh-CN.md)
+- **Checklist**: [RAILWAY_CHECKLIST.md](RAILWAY_CHECKLIST.md)
+
+**Why Railway?**
+- ✅ No server management needed
+- ✅ Automatic HTTPS & domain
+- ✅ $5/month free tier
+- ✅ Perfect for beginners
+
+---
+
+### 🐳 Option B: Docker One-Click Deployment (Local - Recommended for Advanced Users)
 
 **⚡ Start the platform in 2 simple steps with Docker - No installation needed!**
 

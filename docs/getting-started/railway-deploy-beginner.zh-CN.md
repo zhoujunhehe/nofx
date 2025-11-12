@@ -42,60 +42,75 @@ https://github.com/NoFxAiOS/nofx
 
 你需要生成两个密钥：`DATA_ENCRYPTION_KEY` 和 `JWT_SECRET`
 
-### 2.1 打开在线密钥生成器
+### 💡 推荐方法：使用项目自带脚本（最简单）
 
-访问：[https://generate-secret.vercel.app/32](https://generate-secret.vercel.app/32)
-
-或者使用这个备用网站：[https://www.random.org/strings/](https://www.random.org/strings/)
-
-### 2.2 生成第一个密钥 (DATA_ENCRYPTION_KEY)
-
-**方法 A：使用在线工具**
-
-1. 访问 https://generate-secret.vercel.app/32
-2. 点击 **"Generate"** 按钮
-3. 复制生成的字符串（类似：`abcd1234efgh5678...`）
-4. 保存到记事本，标记为 `DATA_ENCRYPTION_KEY`
-
-**方法 B：使用系统终端（推荐）**
+如果你已经克隆了项目到本地：
 
 **macOS/Linux 用户：**
 ```bash
-# 打开终端（Terminal），运行：
+# 进入项目目录
+cd nofx
+
+# 运行密钥生成脚本
+chmod +x scripts/generate_railway_keys.sh
+./scripts/generate_railway_keys.sh
+```
+
+脚本会自动：
+- ✅ 生成两个密钥
+- ✅ 保存到 `.env` 文件
+- ✅ 显示复制到 Railway 的命令
+
+**然后：**
+```bash
+# 查看生成的密钥
+cat .env
+```
+
+复制显示的两个密钥，跳到 [第三步](#第三步在-railway-上创建项目)。
+
+---
+
+### 备用方法：手动生成
+
+如果你没有克隆项目，或者想手动生成：
+
+#### 2.1 使用系统终端生成
+
+**macOS/Linux 用户：**
+```bash
+# 生成 DATA_ENCRYPTION_KEY
 openssl rand -base64 32
+
+# 生成 JWT_SECRET
+openssl rand -base64 64
 ```
 
 **Windows 用户：**
 ```powershell
-# 打开 PowerShell，运行：
+# 打开 PowerShell
+
+# 生成 DATA_ENCRYPTION_KEY
 $bytes = New-Object byte[] 32
 [Security.Cryptography.RNGCryptoServiceProvider]::Create().GetBytes($bytes)
 [Convert]::ToBase64String($bytes)
-```
 
-复制输出的字符串，保存到记事本。
-
-### 2.3 生成第二个密钥 (JWT_SECRET)
-
-**使用相同的方法，但长度改为 64：**
-
-**macOS/Linux：**
-```bash
-openssl rand -base64 64
-```
-
-**Windows PowerShell：**
-```powershell
+# 生成 JWT_SECRET
 $bytes = New-Object byte[] 64
 [Security.Cryptography.RNGCryptoServiceProvider]::Create().GetBytes($bytes)
 [Convert]::ToBase64String($bytes)
 ```
 
-复制输出的字符串，保存到记事本。
+#### 2.2 或使用在线工具
 
-### 2.4 检查你的记事本
+访问：[https://generate-secret.vercel.app/32](https://generate-secret.vercel.app/32)
 
-现在你的记事本应该有两行：
+1. 生成第一个密钥（长度 32）→ `DATA_ENCRYPTION_KEY`
+2. 生成第二个密钥（长度 64）→ `JWT_SECRET`
+
+#### 2.3 保存密钥
+
+将两个密钥保存到记事本：
 
 ```
 DATA_ENCRYPTION_KEY=abcd1234efgh5678ijkl9012mnop3456qrst7890uvwx1234yzab5678cdef==
