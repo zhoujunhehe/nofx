@@ -3,7 +3,7 @@ package market
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"math"
 	"strconv"
@@ -26,17 +26,28 @@ var (
 	frCacheTTL     = 1 * time.Hour
 )
 
-// Get 获取指定代币的市场数据
+// Get 获取指定代币的市场数据（使用默认时间间隔 3m,4h）
 func Get(symbol string) (*Data, error) {
-	var klines3m, klines4h []Kline
+	return GetWithIntervals(symbol, []string{"3m", "4h"})
+}
+
+// GetWithIntervals 获取指定代币的市场数据（支持自定义时间间隔）
+func GetWithIntervals(symbol string, intervals []string) (*Data, error) {
 	// 标准化symbol
 	symbol = Normalize(symbol)
 	if kline.Default == nil {
 		return nil, fmt.Errorf("kline service not initialized")
 	}
+	
+	// 默认时间间隔
+	if len(intervals) == 0 {
+		intervals = []string{"3m", "4h"}
+	}
+	
 	// Ensure subscribed and ready
 	_ = kline.Default.AddSymbols([]string{symbol})
-	// fetch from kline service
+	
+	// 转换函数
 	convert := func(in []kline.Kline) []Kline {
 		out := make([]Kline, len(in))
 		for i, v := range in {
@@ -56,45 +67,66 @@ func Get(symbol string) (*Data, error) {
 		}
 		return out
 	}
-	k3, ok3 := kline.Default.GetRecentKlines(symbol, "3m", 100)
-	if !ok3 || len(k3) == 0 {
-		log.Printf("Warning: kline 3m for %s not ready", symbol)
+
+	// 获取K线数据
+	var klinesShort, klinesLong []Kline
+	shortInterval := intervals[0]  // 第一个用作短期分析（替代原来的3m）
+	longInterval := shortInterval  // 默认长期间隔与短期相同
+	if len(intervals) > 1 {
+		longInterval = intervals[1]  // 第二个用作长期分析（替代原来的4h）
 	}
-	klines3m = convert(k3)
-	k4, ok4 := kline.Default.GetRecentKlines(symbol, "4h", 100)
-	if !ok4 || len(k4) == 0 {
-		log.Printf("Warning: kline 4h for %s not ready", symbol)
+
+	// 获取短期K线数据
+	kShort, okShort := kline.Default.GetRecentKlines(symbol, shortInterval, 100)
+	if !okShort || len(kShort) == 0 {
+		log.Printf("Warning: kline %s for %s not ready", shortInterval, symbol)
 	}
-	klines4h = convert(k4)
+	klinesShort = convert(kShort)
+
+	// 获取长期K线数据
+	var klinesLongConverted []Kline
+	if shortInterval != longInterval {
+		kLong, okLong := kline.Default.GetRecentKlines(symbol, longInterval, 100)
+		if !okLong || len(kLong) == 0 {
+			log.Printf("Warning: kline %s for %s not ready", longInterval, symbol)
+		}
+		klinesLongConverted = convert(kLong)
+	} else {
+		// 使用相同的数据
+		klinesLongConverted = klinesShort
+	}
+	klinesLong = klinesLongConverted
 
 	// 检查数据是否为空
-	if len(klines3m) == 0 {
-		return nil, fmt.Errorf("3分钟K线数据为空")
+	if len(klinesShort) == 0 {
+		return nil, fmt.Errorf("%s K线数据为空", shortInterval)
 	}
-	if len(klines4h) == 0 {
-		return nil, fmt.Errorf("4小时K线数据为空")
+	if len(klinesLong) == 0 {
+		return nil, fmt.Errorf("%s K线数据为空", longInterval)
 	}
 
-	// 计算当前指标 (基于3分钟最新数据)
-	currentPrice := klines3m[len(klines3m)-1].Close
-	currentEMA20 := calculateEMA(klines3m, 20)
-	currentMACD := calculateMACD(klines3m)
-	currentRSI7 := calculateRSI(klines3m, 7)
+	// 计算当前指标 (基于短期最新数据)
+	currentPrice := klinesShort[len(klinesShort)-1].Close
+	currentEMA20 := calculateEMA(klinesShort, 20)
+	currentMACD := calculateMACD(klinesShort)
+	currentRSI7 := calculateRSI(klinesShort, 7)
 
 	// 计算价格变化百分比
-	// 1小时价格变化 = 20个3分钟K线前的价格
+	// 1小时价格变化：根据短期间隔动态计算周期数
 	priceChange1h := 0.0
-	if len(klines3m) >= 21 { // 至少需要21根K线 (当前 + 20根前)
-		price1hAgo := klines3m[len(klines3m)-21].Close
+	periodsFor1h := calculatePeriodsForDuration(shortInterval, "1h")
+	if len(klinesShort) >= periodsFor1h+1 {
+		price1hAgo := klinesShort[len(klinesShort)-1-periodsFor1h].Close
 		if price1hAgo > 0 {
 			priceChange1h = ((currentPrice - price1hAgo) / price1hAgo) * 100
 		}
 	}
 
-	// 4小时价格变化 = 1个4小时K线前的价格
+	// 4小时价格变化：根据长期间隔计算
 	priceChange4h := 0.0
-	if len(klines4h) >= 2 {
-		price4hAgo := klines4h[len(klines4h)-2].Close
+	periodsFor4h := calculatePeriodsForDuration(longInterval, "4h")
+	if len(klinesLong) >= periodsFor4h+1 {
+		price4hAgo := klinesLong[len(klinesLong)-1-periodsFor4h].Close
 		if price4hAgo > 0 {
 			priceChange4h = ((currentPrice - price4hAgo) / price4hAgo) * 100
 		}
@@ -110,11 +142,11 @@ func Get(symbol string) (*Data, error) {
 	// 获取Funding Rate
 	fundingRate, _ := getFundingRate(symbol)
 
-	// 计算日内系列数据
-	intradayData := calculateIntradaySeries(klines3m)
+	// 计算日内系列数据（基于短期K线）
+	intradayData := calculateIntradaySeries(klinesShort)
 
-	// 计算长期数据
-	longerTermData := calculateLongerTermData(klines4h)
+	// 计算长期数据（基于长期K线）
+	longerTermData := calculateLongerTermData(klinesLong)
 
 	return &Data{
 		Symbol:            symbol,
@@ -347,7 +379,7 @@ func getOpenInterestData(symbol string) (*OIData, error) {
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -392,7 +424,7 @@ func getFundingRate(symbol string) (float64, error) {
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return 0, err
 	}
@@ -554,5 +586,84 @@ func parseFloat(v interface{}) (float64, error) {
 		return float64(val), nil
 	default:
 		return 0, fmt.Errorf("unsupported type: %T", v)
+	}
+}
+
+// calculatePeriodsForDuration 计算指定时长需要多少个K线周期
+// 例如：1小时 = 20个3分钟周期 或 1个1小时周期
+func calculatePeriodsForDuration(interval, duration string) int {
+	// 将间隔转换为分钟数
+	intervalMinutes := parseIntervalToMinutes(interval)
+	if intervalMinutes == 0 {
+		return 0
+	}
+	
+	// 将目标时长转换为分钟数
+	var durationMinutes int
+	switch duration {
+	case "1h":
+		durationMinutes = 60
+	case "4h":
+		durationMinutes = 240
+	case "1d":
+		durationMinutes = 1440
+	default:
+		return 0
+	}
+	
+	// 计算需要多少个周期
+	periods := durationMinutes / intervalMinutes
+	if periods < 1 {
+		return 1 // 至少返回1个周期
+	}
+	return periods
+}
+
+// parseIntervalToMinutes 将时间间隔字符串转换为分钟数
+func parseIntervalToMinutes(interval string) int {
+	switch interval {
+	case "1m":
+		return 1
+	case "3m":
+		return 3
+	case "5m":
+		return 5
+	case "15m":
+		return 15
+	case "30m":
+		return 30
+	case "1h":
+		return 60
+	case "2h":
+		return 120
+	case "4h":
+		return 240
+	case "6h":
+		return 360
+	case "8h":
+		return 480
+	case "12h":
+		return 720
+	case "1d":
+		return 1440
+	case "1w":
+		return 10080
+	default:
+		// 尝试解析自定义格式，如 "10m", "2h"
+		if len(interval) >= 2 {
+			unit := interval[len(interval)-1:]
+			numStr := interval[:len(interval)-1]
+			if num, err := strconv.Atoi(numStr); err == nil {
+				switch unit {
+				case "m":
+					return num
+				case "h":
+					return num * 60
+				case "d":
+					return num * 1440
+				}
+			}
+		}
+		return 0
 	}
 }

@@ -38,11 +38,11 @@ type Config struct {
 	MaxDailyLoss       float64        `json:"max_daily_loss"`
 	MaxDrawdown        float64        `json:"max_drawdown"`
 	StopTradingMinutes int            `json:"stop_trading_minutes"`
-	Leverage           LeverageConfig `json:"leverage"`     // 杠杆配置
+	Leverage           LeverageConfig `json:"leverage"`
 	JWTSecret          string         `json:"jwt_secret"`
 	DataKLineTime      string         `json:"data_k_line_time"`
 	Proxy              *ProxyConfig   `json:"proxy"` // HTTP 代理配置（可选）
-	Log                *LogConfig     `json:"log"`   // 日志配置
+	Log                *LogConfig     `json:"log"` // 日志配置
 }
 
 // ProxyConfig HTTP 代理配置
@@ -61,6 +61,7 @@ type ProxyConfig struct {
 	RefreshInterval    int      `json:"refresh_interval"`     // 刷新间隔（秒）
 	BlacklistTTL       int      `json:"blacklist_ttl"`        // 黑名单TTL
 }
+
 // LoadConfig 从文件加载配置
 func LoadConfig(filename string) (*Config, error) {
 	// 检查filename是否存在

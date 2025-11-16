@@ -6,7 +6,6 @@ import (
 	"log"
 	"nofx/api"
 	"nofx/auth"
-	"nofx/bootstrap"
 	"nofx/config"
 	"nofx/crypto"
 	"nofx/manager"
@@ -20,26 +19,25 @@ import (
 	"strings"
 	"syscall"
 	"time"
-
-	"github.com/joho/godotenv"
 )
 
 // ConfigFile 配置文件结构，只包含需要同步到数据库的字段
 // TODO 现在与config.Config相同，未来会被替换， 现在为了兼容性不得不保留当前文件
 type ConfigFile struct {
-	BetaMode           bool                  `json:"beta_mode"`
-	APIServerPort      int                   `json:"api_server_port"`
-	UseDefaultCoins    bool                  `json:"use_default_coins"`
-	DefaultCoins       []string              `json:"default_coins"`
-	CoinPoolAPIURL     string                `json:"coin_pool_api_url"`
-	OITopAPIURL        string                `json:"oi_top_api_url"`
-	MaxDailyLoss       float64               `json:"max_daily_loss"`
-	MaxDrawdown        float64               `json:"max_drawdown"`
-	StopTradingMinutes int                   `json:"stop_trading_minutes"`
-	Leverage           config.LeverageConfig `json:"leverage"`
-	JWTSecret          string                `json:"jwt_secret"`
-	DataKLineTime      string                `json:"data_k_line_time"`
-	Log                *config.LogConfig     `json:"log"` // 日志配置
+	BetaMode              bool                  `json:"beta_mode"`
+	APIServerPort         int                   `json:"api_server_port"`
+	UseDefaultCoins       bool                  `json:"use_default_coins"`
+	DefaultCoins          []string              `json:"default_coins"`
+	DefaultKlineIntervals string                `json:"default_kline_intervals"` // 默认K线时间间隔
+	CoinPoolAPIURL        string                `json:"coin_pool_api_url"`
+	OITopAPIURL           string                `json:"oi_top_api_url"`
+	MaxDailyLoss          float64               `json:"max_daily_loss"`
+	MaxDrawdown           float64               `json:"max_drawdown"`
+	StopTradingMinutes    int                   `json:"stop_trading_minutes"`
+	Leverage              config.LeverageConfig `json:"leverage"`
+	JWTSecret             string                `json:"jwt_secret"`
+	DataKLineTime         string                `json:"data_k_line_time"`
+	Log                   *config.LogConfig     `json:"log"` // 日志配置
 }
 
 // loadConfigFile 读取并解析config.json文件
@@ -66,7 +64,7 @@ func loadConfigFile() (*ConfigFile, error) {
 }
 
 // syncConfigToDatabase 将配置同步到数据库
-func syncConfigToDatabase(database *config.Database, configFile *ConfigFile) error {
+func syncConfigToDatabase(database config.DatabaseInterface, configFile *ConfigFile) error {
 	if configFile == nil {
 		return nil
 	}
@@ -75,14 +73,15 @@ func syncConfigToDatabase(database *config.Database, configFile *ConfigFile) err
 
 	// 同步各配置项到数据库
 	configs := map[string]string{
-		"beta_mode":            fmt.Sprintf("%t", configFile.BetaMode),
-		"api_server_port":      strconv.Itoa(configFile.APIServerPort),
-		"use_default_coins":    fmt.Sprintf("%t", configFile.UseDefaultCoins),
-		"coin_pool_api_url":    configFile.CoinPoolAPIURL,
-		"oi_top_api_url":       configFile.OITopAPIURL,
-		"max_daily_loss":       fmt.Sprintf("%.1f", configFile.MaxDailyLoss),
-		"max_drawdown":         fmt.Sprintf("%.1f", configFile.MaxDrawdown),
-		"stop_trading_minutes": strconv.Itoa(configFile.StopTradingMinutes),
+		"beta_mode":               fmt.Sprintf("%t", configFile.BetaMode),
+		"api_server_port":         strconv.Itoa(configFile.APIServerPort),
+		"use_default_coins":       fmt.Sprintf("%t", configFile.UseDefaultCoins),
+		"coin_pool_api_url":       configFile.CoinPoolAPIURL,
+		"oi_top_api_url":          configFile.OITopAPIURL,
+		"max_daily_loss":          fmt.Sprintf("%.1f", configFile.MaxDailyLoss),
+		"max_drawdown":            fmt.Sprintf("%.1f", configFile.MaxDrawdown),
+		"stop_trading_minutes":    strconv.Itoa(configFile.StopTradingMinutes),
+		"default_kline_intervals": configFile.DefaultKlineIntervals,
 	}
 
 	// 同步default_coins（转换为JSON字符串存储）
@@ -101,11 +100,6 @@ func syncConfigToDatabase(database *config.Database, configFile *ConfigFile) err
 		configs["altcoin_leverage"] = strconv.Itoa(configFile.Leverage.AltcoinLeverage)
 	}
 
-	// 如果JWT密钥不为空，也同步
-	if configFile.JWTSecret != "" {
-		configs["jwt_secret"] = configFile.JWTSecret
-	}
-
 	// 更新数据库配置
 	for key, value := range configs {
 		if err := database.SetSystemConfig(key, value); err != nil {
@@ -120,7 +114,7 @@ func syncConfigToDatabase(database *config.Database, configFile *ConfigFile) err
 }
 
 // loadBetaCodesToDatabase 加载内测码文件到数据库
-func loadBetaCodesToDatabase(database *config.Database) error {
+func loadBetaCodesToDatabase(database config.DatabaseInterface) error {
 	betaCodeFile := "beta_codes.txt"
 
 	// 检查内测码文件是否存在
@@ -160,24 +154,14 @@ func main() {
 	fmt.Println("╚════════════════════════════════════════════════════════════╝")
 	fmt.Println()
 
-	// Load environment variables from .env file if present (for local/dev runs)
-	// In Docker Compose, variables are injected by the runtime and this is harmless.
-	_ = godotenv.Load()
-
-	// 初始化数据库配置
-	dbPath := "config.db"
-	if len(os.Args) > 1 {
-		dbPath = os.Args[1]
-	}
-
 	// 读取配置文件
 	configFile, err := loadConfigFile()
 	if err != nil {
 		log.Fatalf("❌ 读取config.json失败: %v", err)
 	}
 
-	log.Printf("📋 初始化配置数据库: %s", dbPath)
-	database, err := config.NewDatabase(dbPath)
+	log.Printf("📋 初始化配置数据库 (PostgreSQL)")
+	database, err := config.NewDatabase()
 	if err != nil {
 		log.Fatalf("❌ 初始化数据库失败: %v", err)
 	}
@@ -204,26 +188,20 @@ func main() {
 
 	// 获取系统配置
 	useDefaultCoinsStr, _ := database.GetSystemConfig("use_default_coins")
-	useDefaultCoins := useDefaultCoinsStr == "true"
+	useDefaultCoins := false
+	if useDefaultCoinsStr != nil {
+		if str, ok := useDefaultCoinsStr.(string); ok {
+			useDefaultCoins = str == "true"
+		}
+	}
 	apiPortStr, _ := database.GetSystemConfig("api_server_port")
 
 	// 设置JWT密钥（优先使用环境变量）
 	jwtSecret := strings.TrimSpace(os.Getenv("JWT_SECRET"))
 	if jwtSecret == "" {
-		// 回退到数据库配置
-		jwtSecret, _ = database.GetSystemConfig("jwt_secret")
-		if jwtSecret == "" {
-			jwtSecret = "your-jwt-secret-key-change-in-production-make-it-long-and-random"
-			log.Printf("⚠️  使用默认JWT密钥，建议使用加密设置脚本生成安全密钥")
-		} else {
-			log.Printf("🔑 使用数据库中JWT密钥")
-		}
-	} else {
-		log.Printf("🔑 使用环境变量JWT密钥")
+		log.Printf("⚠️  环境变量未配置JWT密钥")
 	}
 	auth.SetJWTSecret(jwtSecret)
-
-	// 管理员模式下需要管理员密码，缺失则退出
 
 	log.Printf("✓ 配置数据库初始化成功")
 	fmt.Println()
@@ -232,13 +210,15 @@ func main() {
 	defaultCoinsJSON, _ := database.GetSystemConfig("default_coins")
 	var defaultCoins []string
 
-	if defaultCoinsJSON != "" {
-		// 尝试从JSON解析
-		if err := json.Unmarshal([]byte(defaultCoinsJSON), &defaultCoins); err != nil {
-			log.Printf("⚠️  解析default_coins配置失败: %v，使用硬编码默认值", err)
-			defaultCoins = []string{"BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT", "ADAUSDT", "HYPEUSDT"}
-		} else {
-			log.Printf("✓ 从数据库加载默认币种列表（共%d个）: %v", len(defaultCoins), defaultCoins)
+	if defaultCoinsJSON != nil {
+		if str, ok := defaultCoinsJSON.(string); ok && str != "" {
+			// 尝试从JSON解析
+			if err := json.Unmarshal([]byte(str), &defaultCoins); err != nil {
+				log.Printf("⚠️  解析default_coins配置失败: %v，使用硬编码默认值", err)
+				defaultCoins = []string{"BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT", "ADAUSDT", "HYPEUSDT"}
+			} else {
+				log.Printf("✓ 从数据库加载默认币种列表（共%d个）: %v", len(defaultCoins), defaultCoins)
+			}
 		}
 	} else {
 		// 如果数据库中没有配置，使用硬编码默认值
@@ -255,15 +235,19 @@ func main() {
 
 	// 设置币种池API URL
 	coinPoolAPIURL, _ := database.GetSystemConfig("coin_pool_api_url")
-	if coinPoolAPIURL != "" {
-		pool.SetCoinPoolAPI(coinPoolAPIURL)
-		log.Printf("✓ 已配置AI500币种池API")
+	if coinPoolAPIURL != nil {
+		if str, ok := coinPoolAPIURL.(string); ok && str != "" {
+			pool.SetCoinPoolAPI(str)
+			log.Printf("✓ 已配置AI500币种池API")
+		}
 	}
 
 	oiTopAPIURL, _ := database.GetSystemConfig("oi_top_api_url")
-	if oiTopAPIURL != "" {
-		pool.SetOITopAPI(oiTopAPIURL)
-		log.Printf("✓ 已配置OI Top API")
+	if oiTopAPIURL != nil {
+		if str, ok := oiTopAPIURL.(string); ok && str != "" {
+			pool.SetOITopAPI(str)
+			log.Printf("✓ 已配置OI Top API")
+		}
 	}
 
 	// 创建TraderManager
@@ -300,12 +284,12 @@ func main() {
 
 	// 创建初始化上下文
 	// TODO : 传入实际配置, 现在并未实际使用，未来所有模块初始化都将通过上下文传递配置
-	ctx := bootstrap.NewContext(&config.Config{})
+	// ctx := bootstrap.NewContext(&config.Config{})
 
-	// 执行所有初始化钩子
-	if err := bootstrap.Run(ctx); err != nil {
-		log.Fatalf("初始化失败: %v", err)
-	}
+	// // 执行所有初始化钩子
+	// if err := bootstrap.Run(ctx); err != nil {
+	// 	log.Fatalf("初始化失败: %v", err)
+	// }
 
 	fmt.Println()
 	fmt.Println("🤖 AI全权决策模式:")
@@ -331,11 +315,13 @@ func main() {
 		} else {
 			log.Printf("⚠️  环境变量 NOFX_BACKEND_PORT 无效: %s", envPort)
 		}
-	} else if apiPortStr != "" {
+	} else if apiPortStr != nil {
 		// 2. 从数据库配置读取（config.json 同步过来的）
-		if port, err := strconv.Atoi(apiPortStr); err == nil && port > 0 {
-			apiPort = port
-			log.Printf("🔌 使用数据库配置端口: %d (api_server_port)", apiPort)
+		if str, ok := apiPortStr.(string); ok && str != "" {
+			if port, err := strconv.Atoi(str); err == nil && port > 0 {
+				apiPort = port
+				log.Printf("🔌 使用数据库配置端口: %d (api_server_port)", apiPort)
+			}
 		}
 	} else {
 		log.Printf("🔌 使用默认端口: %d", apiPort)
@@ -350,7 +336,7 @@ func main() {
 	}()
 
 	// 初始化 kline 服务（3m/4h）
-	customCoins := database.GetCustomCoins()
+	customCoins, _ := database.GetCustomCoins()
 	opts := kline.Options{
 		BatchSize:             150,
 		BackfillWindow:        100,

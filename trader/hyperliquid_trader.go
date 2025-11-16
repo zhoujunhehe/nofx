@@ -8,6 +8,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/sonirico/go-hyperliquid"
@@ -19,6 +20,7 @@ type HyperliquidTrader struct {
 	ctx           context.Context
 	walletAddr    string
 	meta          *hyperliquid.Meta // 缓存meta信息（包含精度等）
+	metaMutex     sync.RWMutex      // 保护meta字段的并发访问
 	isCrossMargin bool              // 是否为全仓模式
 }
 
@@ -334,6 +336,41 @@ func (t *HyperliquidTrader) SetLeverage(symbol string, leverage int) error {
 	return nil
 }
 
+// refreshMetaIfNeeded 当 Meta 信息失效时刷新（Asset ID 为 0 时触发）
+func (t *HyperliquidTrader) refreshMetaIfNeeded(coin string) error {
+	assetID := t.exchange.Info().NameToAsset(coin)
+	if assetID != 0 {
+		return nil // Meta 正常，无需刷新
+	}
+
+	log.Printf("⚠️  %s 的 Asset ID 为 0，尝试刷新 Meta 信息...", coin)
+
+	// 刷新 Meta 信息
+	meta, err := t.exchange.Info().Meta(t.ctx)
+	if err != nil {
+		return fmt.Errorf("刷新 Meta 信息失败: %w", err)
+	}
+
+	// ✅ 并发安全：使用写锁保护 meta 字段更新
+	t.metaMutex.Lock()
+	t.meta = meta
+	t.metaMutex.Unlock()
+
+	log.Printf("✅ Meta 信息已刷新，包含 %d 个资产", len(meta.Universe))
+
+	// 验证刷新后的 Asset ID
+	assetID = t.exchange.Info().NameToAsset(coin)
+	if assetID == 0 {
+		return fmt.Errorf("❌ 即使在刷新 Meta 后，资产 %s 的 Asset ID 仍为 0。可能原因：\n"+
+			"  1. 该币种未在 Hyperliquid 上市\n"+
+			"  2. 币种名称错误（应为 BTC 而非 BTCUSDT）\n"+
+			"  3. API 连接问题", coin)
+	}
+
+	log.Printf("✅ 刷新后 Asset ID 检查通过: %s -> %d", coin, assetID)
+	return nil
+}
+
 // OpenLong 开多仓
 func (t *HyperliquidTrader) OpenLong(symbol string, quantity float64, leverage int) (map[string]interface{}, error) {
 	// 先取消该币种的所有委托单
@@ -594,7 +631,39 @@ func (t *HyperliquidTrader) CloseShort(symbol string, quantity float64) (map[str
 	return result, nil
 }
 
-// CancelStopOrders 取消该币种的止盈/止
+// CancelStopOrders 取消该币种的止盈/止损单（用于调整止盈止损位置）
+func (t *HyperliquidTrader) CancelStopOrders(symbol string) error {
+	coin := convertSymbolToHyperliquid(symbol)
+
+	// 获取所有挂单
+	openOrders, err := t.exchange.Info().OpenOrders(t.ctx, t.walletAddr)
+	if err != nil {
+		return fmt.Errorf("获取挂单失败: %w", err)
+	}
+
+	// 注意：Hyperliquid SDK 的 OpenOrder 结构不暴露 trigger 字段
+	// 因此暂时取消该币种的所有挂单（包括止盈止损单）
+	// 这是安全的，因为在设置新的止盈止损之前，应该清理所有旧订单
+	canceledCount := 0
+	for _, order := range openOrders {
+		if order.Coin == coin {
+			_, err := t.exchange.Cancel(t.ctx, coin, order.Oid)
+			if err != nil {
+				log.Printf("  ⚠ 取消订单失败 (oid=%d): %v", order.Oid, err)
+				continue
+			}
+			canceledCount++
+		}
+	}
+
+	if canceledCount == 0 {
+		log.Printf("  ℹ %s 没有挂单需要取消", symbol)
+	} else {
+		log.Printf("  ✓ 已取消 %s 的 %d 个挂单（包括止盈/止损单）", symbol, canceledCount)
+	}
+
+	return nil
+}
 
 // CancelStopLossOrders 仅取消止损单（Hyperliquid 暂无法区分止损和止盈，取消所有）
 func (t *HyperliquidTrader) CancelStopLossOrders(symbol string) error {
@@ -633,40 +702,6 @@ func (t *HyperliquidTrader) CancelAllOrders(symbol string) error {
 	}
 
 	log.Printf("  ✓ 已取消 %s 的所有挂单", symbol)
-	return nil
-}
-
-// CancelStopOrders 取消该币种的止盈/止损单（用于调整止盈止损位置）
-func (t *HyperliquidTrader) CancelStopOrders(symbol string) error {
-	coin := convertSymbolToHyperliquid(symbol)
-
-	// 获取所有挂单
-	openOrders, err := t.exchange.Info().OpenOrders(t.ctx, t.walletAddr)
-	if err != nil {
-		return fmt.Errorf("获取挂单失败: %w", err)
-	}
-
-	// 注意：Hyperliquid SDK 的 OpenOrder 结构不暴露 trigger 字段
-	// 因此暂时取消该币种的所有挂单（包括止盈止损单）
-	// 这是安全的，因为在设置新的止盈止损之前，应该清理所有旧订单
-	canceledCount := 0
-	for _, order := range openOrders {
-		if order.Coin == coin {
-			_, err := t.exchange.Cancel(t.ctx, coin, order.Oid)
-			if err != nil {
-				log.Printf("  ⚠ 取消订单失败 (oid=%d): %v", order.Oid, err)
-				continue
-			}
-			canceledCount++
-		}
-	}
-
-	if canceledCount == 0 {
-		log.Printf("  ℹ %s 没有挂单需要取消", symbol)
-	} else {
-		log.Printf("  ✓ 已取消 %s 的 %d 个挂单（包括止盈/止损单）", symbol, canceledCount)
-	}
-
 	return nil
 }
 
@@ -778,6 +813,10 @@ func (t *HyperliquidTrader) FormatQuantity(symbol string, quantity float64) (str
 
 // getSzDecimals 获取币种的数量精度
 func (t *HyperliquidTrader) getSzDecimals(coin string) int {
+	// ✅ 并发安全：使用读锁保护 meta 字段访问
+	t.metaMutex.RLock()
+	defer t.metaMutex.RUnlock()
+
 	if t.meta == nil {
 		log.Printf("⚠️  meta信息为空，使用默认精度4")
 		return 4 // 默认精度

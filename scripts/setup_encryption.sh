@@ -169,11 +169,11 @@ fi
 if [ "$KEY_SKIPPED" != "true" ]; then
     # 生成新的密钥
     echo -e "  ${CYAN}生成AES-256数据加密密钥...${NC}"
-    DATA_KEY=$(openssl rand -base64 32)
+    DATA_KEY=$(openssl rand -base64 32 | tr -d '\n\r')
     echo -e "${GREEN}  ✓ 数据加密密钥生成完成${NC}"
-    
+
     echo -e "  ${CYAN}生成JWT认证密钥...${NC}"
-    JWT_KEY=$(openssl rand -base64 64)
+    JWT_KEY=$(openssl rand -base64 64 | tr -d '\n\r')
     echo -e "${GREEN}  ✓ JWT认证密钥生成完成${NC}"
     
     # 保存到.env文件
@@ -190,20 +190,20 @@ if [ "$KEY_SKIPPED" != "true" ]; then
         fi
         
         if grep -q "^JWT_SECRET=" .env; then
-            # 使用替代分隔符避免 / 字符冲突，并用引号保护值
+            # 使用替代分隔符避免 / 字符冲突
             if [[ "$OSTYPE" == "darwin"* ]]; then
-                sed -i '' "s|^JWT_SECRET=.*|JWT_SECRET=\"$JWT_KEY\"|" .env
+                sed -i '' "s|^JWT_SECRET=.*|JWT_SECRET=$JWT_KEY|" .env
             else
-                sed -i "s|^JWT_SECRET=.*|JWT_SECRET=\"$JWT_KEY\"|" .env
+                sed -i "s|^JWT_SECRET=.*|JWT_SECRET=$JWT_KEY|" .env
             fi
         else
-            # 使用引号确保值在同一行
-            printf "JWT_SECRET=\"%s\"\n" "$JWT_KEY" >> .env
+            # 不使用引号，确保值在同一行
+            echo "JWT_SECRET=$JWT_KEY" >> .env
         fi
     else
         # 创建新文件
         echo "DATA_ENCRYPTION_KEY=$DATA_KEY" > .env
-        printf "JWT_SECRET=\"%s\"\n" "$JWT_KEY" >> .env
+        echo "JWT_SECRET=$JWT_KEY" >> .env
     fi
     chmod 600 .env
     echo -e "${GREEN}  ✓ 密钥已保存到 .env 文件${NC}"
@@ -211,15 +211,15 @@ elif [ "$DATA_KEY_EXISTS" != "true" ] || [ "$JWT_KEY_EXISTS" != "true" ]; then
     # 生成缺失的密钥
     if [ "$DATA_KEY_EXISTS" != "true" ]; then
         echo -e "  ${CYAN}生成缺失的AES-256数据加密密钥...${NC}"
-        DATA_KEY=$(openssl rand -base64 32)
+        DATA_KEY=$(openssl rand -base64 32 | tr -d '\n\r')
         echo "DATA_ENCRYPTION_KEY=$DATA_KEY" >> .env
         echo -e "${GREEN}  ✓ 数据加密密钥生成完成${NC}"
     fi
-    
+
     if [ "$JWT_KEY_EXISTS" != "true" ]; then
         echo -e "  ${CYAN}生成缺失的JWT认证密钥...${NC}"
-        JWT_KEY=$(openssl rand -base64 64)
-        printf "JWT_SECRET=\"%s\"\n" "$JWT_KEY" >> .env
+        JWT_KEY=$(openssl rand -base64 64 | tr -d '\n\r')
+        echo "JWT_SECRET=$JWT_KEY" >> .env
         echo -e "${GREEN}  ✓ JWT认证密钥生成完成${NC}"
     fi
     

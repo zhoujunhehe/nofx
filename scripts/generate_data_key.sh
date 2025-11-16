@@ -37,7 +37,7 @@ echo
 
 # 生成 AES-256 数据加密密钥
 echo -e "${YELLOW}1/2: 生成 AES-256 数据加密密钥...${NC}"
-DATA_KEY=$(openssl rand -base64 32)
+DATA_KEY=$(openssl rand -base64 32 | tr -d '\n\r')
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}  ✓ 数据加密密钥生成成功${NC}"
 else
@@ -47,7 +47,7 @@ fi
 
 # 生成 JWT 认证密钥
 echo -e "${YELLOW}2/2: 生成 JWT 认证密钥...${NC}"
-JWT_KEY=$(openssl rand -base64 64)
+JWT_KEY=$(openssl rand -base64 64 | tr -d '\n\r')
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}  ✓ JWT认证密钥生成成功${NC}"
 else

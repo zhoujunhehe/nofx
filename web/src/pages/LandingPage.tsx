@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
-import HeaderBar from '../components/landing/HeaderBar'
+import HeaderBar from '../components/HeaderBar'
 import HeroSection from '../components/landing/HeroSection'
 import AboutSection from '../components/landing/AboutSection'
 import FeaturesSection from '../components/landing/FeaturesSection'
@@ -39,6 +39,8 @@ export function LandingPage() {
             window.location.href = '/traders'
           } else if (page === 'trader') {
             window.location.href = '/dashboard'
+          } else if (page === 'faq') {
+            window.location.href = '/faq'
           }
         }}
       />
