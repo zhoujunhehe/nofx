@@ -21,7 +21,7 @@ func main() {
 
 	// 尝试加载 .env 文件（从项目根目录运行时）
 	envPaths := []string{
-		".env",          // 项目根目录
+		".env", // 项目根目录
 	}
 	envLoaded := false
 	for _, envPath := range envPaths {
@@ -48,13 +48,13 @@ func main() {
 
 func run(privateKeyPath string, dryRun bool) error {
 	log.SetFlags(0)
-	
+
 	// 尝试多个可能的私钥路径（从项目根目录运行时）
 	keyPaths := []string{
-		privateKeyPath,        // 用户指定的路径
+		privateKeyPath,         // 用户指定的路径
 		"keys/rsa_private.key", // 项目根目录的 keys 文件夹
 	}
-	
+
 	var finalKeyPath string
 	for _, path := range keyPaths {
 		if _, err := os.Stat(path); err == nil {
@@ -63,7 +63,7 @@ func run(privateKeyPath string, dryRun bool) error {
 			break
 		}
 	}
-	
+
 	if finalKeyPath == "" {
 		finalKeyPath = privateKeyPath // 使用默认路径，让 crypto 服务生成新密钥
 		log.Printf("警告: 私钥文件不存在，将使用路径: %s, 系统将尝试生成新密钥", finalKeyPath)
@@ -342,7 +342,7 @@ func loadEnvFile(filename string) error {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		
+
 		// 跳过空行和注释行
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue

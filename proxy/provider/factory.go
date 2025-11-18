@@ -4,8 +4,8 @@ import "fmt"
 
 const (
 	// Provider modes
-	ProviderModeSingle    = "single"
-	ProviderModePool      = "pool"
+	ProviderModeSingle     = "single"
+	ProviderModePool       = "pool"
 	ProviderModeBrightData = "brightdata"
 )
 

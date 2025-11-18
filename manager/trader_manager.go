@@ -104,7 +104,7 @@ func (tm *TraderManager) LoadTradersFromDatabase(database config.DatabaseInterfa
 	if defaultCoinsStr != nil {
 		if str, ok := defaultCoinsStr.(string); ok && str != "" {
 			if err := json.Unmarshal([]byte(str), &defaultCoins); err != nil {
-			log.Printf("⚠️ 解析默认币种配置失败: %v，使用空列表", err)
+				log.Printf("⚠️ 解析默认币种配置失败: %v，使用空列表", err)
 				defaultCoins = []string{}
 			}
 		}
@@ -820,7 +820,7 @@ func (tm *TraderManager) LoadUserTraders(database config.DatabaseInterface, user
 	if defaultCoinsStr != nil {
 		if str, ok := defaultCoinsStr.(string); ok && str != "" {
 			if err := json.Unmarshal([]byte(str), &defaultCoins); err != nil {
-			log.Printf("⚠️ 解析默认币种配置失败: %v，使用空列表", err)
+				log.Printf("⚠️ 解析默认币种配置失败: %v，使用空列表", err)
 				defaultCoins = []string{}
 			}
 		}
@@ -1049,7 +1049,7 @@ func (tm *TraderManager) LoadTraderByID(database config.DatabaseInterface, userI
 	if defaultCoinsStr != nil {
 		if str, ok := defaultCoinsStr.(string); ok && str != "" {
 			if err := json.Unmarshal([]byte(str), &defaultCoins); err != nil {
-			log.Printf("⚠️ 解析默认币种配置失败: %v，使用空列表", err)
+				log.Printf("⚠️ 解析默认币种配置失败: %v，使用空列表", err)
 				defaultCoins = []string{}
 			}
 		}

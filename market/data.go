@@ -38,15 +38,15 @@ func GetWithIntervals(symbol string, intervals []string) (*Data, error) {
 	if kline.Default == nil {
 		return nil, fmt.Errorf("kline service not initialized")
 	}
-	
+
 	// 默认时间间隔
 	if len(intervals) == 0 {
 		intervals = []string{"3m", "4h"}
 	}
-	
+
 	// Ensure subscribed and ready
 	_ = kline.Default.AddSymbols([]string{symbol})
-	
+
 	// 转换函数
 	convert := func(in []kline.Kline) []Kline {
 		out := make([]Kline, len(in))
@@ -70,10 +70,10 @@ func GetWithIntervals(symbol string, intervals []string) (*Data, error) {
 
 	// 获取K线数据
 	var klinesShort, klinesLong []Kline
-	shortInterval := intervals[0]  // 第一个用作短期分析（替代原来的3m）
-	longInterval := shortInterval  // 默认长期间隔与短期相同
+	shortInterval := intervals[0] // 第一个用作短期分析（替代原来的3m）
+	longInterval := shortInterval // 默认长期间隔与短期相同
 	if len(intervals) > 1 {
-		longInterval = intervals[1]  // 第二个用作长期分析（替代原来的4h）
+		longInterval = intervals[1] // 第二个用作长期分析（替代原来的4h）
 	}
 
 	// 获取短期K线数据
@@ -597,7 +597,7 @@ func calculatePeriodsForDuration(interval, duration string) int {
 	if intervalMinutes == 0 {
 		return 0
 	}
-	
+
 	// 将目标时长转换为分钟数
 	var durationMinutes int
 	switch duration {
@@ -610,7 +610,7 @@ func calculatePeriodsForDuration(interval, duration string) int {
 	default:
 		return 0
 	}
-	
+
 	// 计算需要多少个周期
 	periods := durationMinutes / intervalMinutes
 	if periods < 1 {

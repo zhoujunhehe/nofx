@@ -1433,7 +1433,7 @@ func sortDecisionsByPriority(decisions []decision.Decision) []decision.Decision 
 
 // getCandidateCoins 获取交易员的候选币种列表
 func (at *AutoTrader) getCandidateCoins() ([]decision.CandidateCoin, error) {
-	log.Printf("🔍 [DEBUG] [%s] getCandidateCoins: tradingCoins=%v (len=%d), defaultCoins=%v (len=%d)", 
+	log.Printf("🔍 [DEBUG] [%s] getCandidateCoins: tradingCoins=%v (len=%d), defaultCoins=%v (len=%d)",
 		at.name, at.tradingCoins, len(at.tradingCoins), at.defaultCoins, len(at.defaultCoins))
 	if len(at.tradingCoins) == 0 {
 		// 使用数据库配置的默认币种列表
