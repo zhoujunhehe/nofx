@@ -1006,6 +1006,26 @@ func (d *PostgreSQLDatabase) initDefaultData() error {
 		return fmt.Errorf("添加deleted列失败: %w", err)
 	}
 
+	// 创建agent_wallets表（如果不存在）
+	if _, err := d.db.Exec(`
+		CREATE TABLE IF NOT EXISTS agent_wallets (
+			id SERIAL PRIMARY KEY,
+			main_wallet TEXT NOT NULL UNIQUE,
+			agent_address TEXT NOT NULL UNIQUE,
+			encrypted_private_key TEXT NOT NULL,
+			authorization_signature TEXT DEFAULT '',
+			status TEXT DEFAULT 'INIT',
+			hyperliquid_chain TEXT DEFAULT 'Mainnet',
+			builder_fee_authorized BOOLEAN DEFAULT FALSE,
+			builder_fee_max_rate INTEGER DEFAULT 0,
+			builder_fee_authorized_at TIMESTAMP,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		)
+	`); err != nil {
+		return fmt.Errorf("创建agent_wallets表失败: %w", err)
+	}
+
 	// 首先创建default用户（如果不存在）
 	_, err := d.db.Exec(`
 		INSERT INTO users (id, email, password_hash, otp_secret, otp_verified)
@@ -1057,6 +1077,11 @@ func (d *PostgreSQLDatabase) initDefaultData() error {
 	}
 
 	return nil
+}
+
+// GetDB 获取底层数据库连接（用于直接 SQL 操作）
+func (d *PostgreSQLDatabase) GetDB() interface{} {
+	return d.db
 }
 
 // Close 关闭数据库连接

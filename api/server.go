@@ -145,6 +145,12 @@ func (s *Server) setupRoutes() {
 			protected.GET("/user/signal-sources", s.handleGetUserSignalSource)
 			protected.POST("/user/signal-sources", s.handleSaveUserSignalSource)
 
+			// Agent 钱包管理
+			protected.POST("/agent/create", s.handleCreateAgentWallet)
+			protected.GET("/agent/status", s.handleGetAgentWallet)
+			protected.POST("/agent/authorize", s.handleAuthorizeAgent)
+			protected.POST("/agent/confirm-builder-fee", s.handleConfirmBuilderFee)
+
 			// 指定trader的数据（使用query参数 ?trader_id=xxx）
 			protected.GET("/status", s.handleStatus)
 			protected.GET("/account", s.handleAccount)
@@ -491,7 +497,7 @@ type CreateTraderRequest struct {
 	IsCrossMargin        *bool   `json:"is_cross_margin"`        // 指针类型，nil表示使用默认值true
 	UseCoinPool          bool    `json:"use_coin_pool"`
 	UseOITop             bool    `json:"use_oi_top"`
-	KlineIntervals       string  `json:"kline_intervals"`        // K线时间间隔配置，格式如 "3m,4h"
+	KlineIntervals       string  `json:"kline_intervals"` // K线时间间隔配置，格式如 "3m,4h"
 }
 
 type ModelConfig struct {
@@ -791,7 +797,7 @@ type UpdateTraderRequest struct {
 	OverrideBasePrompt   bool    `json:"override_base_prompt"`
 	SystemPromptTemplate string  `json:"system_prompt_template"`
 	IsCrossMargin        *bool   `json:"is_cross_margin"`
-	KlineIntervals       string  `json:"kline_intervals"`        // K线时间间隔配置
+	KlineIntervals       string  `json:"kline_intervals"` // K线时间间隔配置
 }
 
 // handleUpdateTrader 更新交易员配置
@@ -877,7 +883,7 @@ func (s *Server) handleUpdateTrader(c *gin.Context) {
 		SystemPromptTemplate: systemPromptTemplate,
 		IsCrossMargin:        isCrossMargin,
 		ScanIntervalMinutes:  scanIntervalMinutes,
-		KlineIntervals:       req.KlineIntervals, // K线时间间隔配置
+		KlineIntervals:       req.KlineIntervals,       // K线时间间隔配置
 		IsRunning:            existingTrader.IsRunning, // 保持原值
 	}
 
@@ -1964,10 +1970,10 @@ func (s *Server) handleCompleteRegistration(c *gin.Context) {
 // handleLogin 处理用户登录请求
 func (s *Server) handleLogin(c *gin.Context) {
 	var req struct {
-		Email             string                      `json:"email" binding:"required,email"`
-		Password          string                      `json:"password" binding:"required"`
-		EmailEncrypted    *crypto.EncryptedPayload    `json:"email_encrypted"`
-		PasswordEncrypted *crypto.EncryptedPayload    `json:"password_encrypted"`
+		Email             string                   `json:"email" binding:"required,email"`
+		Password          string                   `json:"password" binding:"required"`
+		EmailEncrypted    *crypto.EncryptedPayload `json:"email_encrypted"`
+		PasswordEncrypted *crypto.EncryptedPayload `json:"password_encrypted"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
