@@ -58,6 +58,10 @@ export const router = createBrowserRouter([
         path: '/agent-wallet',
         element: <AgentWalletBackendPage />,
       },
+      {
+        path: '/agent-wallet-backend',
+        element: <AgentWalletBackendPage />,
+      },
     ],
   },
   {

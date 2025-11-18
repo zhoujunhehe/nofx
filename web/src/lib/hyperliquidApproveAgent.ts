@@ -7,19 +7,20 @@
 
 import { type WalletClient } from 'viem'
 
-// EIP-712 Domain for Hyperliquid (matches official documentation)
+// EIP-712 Domain for Hyperliquid (matches official Python SDK)
 const HYPERLIQUID_DOMAIN = {
   name: 'HyperliquidSignTransaction',
   version: '1',
-  chainId: 421614, // Hyperliquid L1 (0x66eee) - used for user-signed actions
-  verifyingContract: '0x0000000000000000000000000000000000000000' as `0x${string}`,
+  chainId: 421614, // Hyperliquid L1 (0x66eee) - matches Python SDK user_signed_payload
+  verifyingContract:
+    '0x0000000000000000000000000000000000000000' as `0x${string}`,
 }
 
-// EIP-712 Types for ApproveAgent (matches Hyperliquid API - order matters!)
+// EIP-712 Types for ApproveAgent (ALWAYS includes agentName per Python SDK)
 const APPROVE_AGENT_TYPES = {
   'HyperliquidTransaction:ApproveAgent': [
     { name: 'hyperliquidChain', type: 'string' },
-    { name: 'agentAddress', type: 'string' },
+    { name: 'agentAddress', type: 'address' },
     { name: 'agentName', type: 'string' },
     { name: 'nonce', type: 'uint64' },
   ],
@@ -34,7 +35,11 @@ interface ApproveAgentParams {
 /**
  * Convert hex signature to {r, s, v} format (Hyperliquid API expects this format)
  */
-function signatureToRSV(signature: string): { r: string; s: string; v: number } {
+function signatureToRSV(signature: string): {
+  r: string
+  s: string
+  v: number
+} {
   // Remove 0x prefix if present
   const sig = signature.startsWith('0x') ? signature.slice(2) : signature
 
@@ -66,14 +71,21 @@ export async function signApproveAgent(
 
   const nonce = Date.now()
 
+  // Python SDK behavior: ALWAYS include agentName in signature (use empty string if not provided)
   const message = {
     hyperliquidChain,
-    agentAddress: agentAddress.toLowerCase(),
-    agentName,
+    agentAddress: agentAddress as `0x${string}`,
+    agentName: agentName || '',  // Always include, default to empty string
     nonce: BigInt(nonce),
   }
 
-  // Sign using EIP-712 (matches Hyperliquid API)
+  // 🔍 DEBUG: Log the exact EIP-712 signing details
+  console.log('🔐 ApproveAgent Signature Message:', message)
+  console.log('🔍 [EIP-712] Domain:', HYPERLIQUID_DOMAIN)
+  console.log('🔍 [EIP-712] Types:', APPROVE_AGENT_TYPES)
+  console.log('🔍 [EIP-712] Signer Address:', walletClient.account.address)
+
+  // Sign using EIP-712 (always with 4-field types including agentName)
   const signatureHex = await walletClient.signTypedData({
     account: walletClient.account,
     domain: HYPERLIQUID_DOMAIN,
@@ -84,6 +96,9 @@ export async function signApproveAgent(
 
   // Convert to {r, s, v} format (required by Hyperliquid API)
   const signature = signatureToRSV(signatureHex)
+
+  console.log('✍️ Signature RSV:', signature)
+  console.log('✍️ Signature Hex:', signatureHex)
 
   return { signature, signatureHex, nonce }
 }

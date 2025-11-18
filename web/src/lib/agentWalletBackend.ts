@@ -5,6 +5,20 @@
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
+// Helper function to get auth headers
+function getAuthHeaders(): Record<string, string> {
+  const token = localStorage.getItem('auth_token')
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  }
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+
+  return headers
+}
+
 export interface AgentWallet {
   id: number
   main_wallet: string
@@ -65,9 +79,7 @@ export async function createAgentWallet(
 ): Promise<CreateAgentWalletResponse> {
   const response = await fetch(`${API_BASE_URL}/api/agent/create`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: getAuthHeaders(),
     body: JSON.stringify({
       main_wallet: mainWallet.toLowerCase(),
       hyperliquid_chain: hyperliquidChain,
@@ -85,14 +97,14 @@ export async function createAgentWallet(
 /**
  * 查询 Agent 钱包状态
  */
-export async function getAgentWallet(mainWallet: string): Promise<GetAgentWalletResponse> {
+export async function getAgentWallet(
+  mainWallet: string
+): Promise<GetAgentWalletResponse> {
   const response = await fetch(
     `${API_BASE_URL}/api/agent/status?main_wallet=${mainWallet.toLowerCase()}`,
     {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getAuthHeaders(),
     }
   )
 
@@ -112,9 +124,7 @@ export async function authorizeAgent(
 ): Promise<AuthorizeAgentResponse> {
   const response = await fetch(`${API_BASE_URL}/api/agent/authorize`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: getAuthHeaders(),
     body: JSON.stringify(request),
   })
 
@@ -143,16 +153,17 @@ export async function confirmBuilderFee(
   mainWallet: string,
   maxFeeRate: number
 ): Promise<ConfirmBuilderFeeResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/agent/confirm-builder-fee`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      main_wallet: mainWallet.toLowerCase(),
-      max_fee_rate: maxFeeRate,
-    } as ConfirmBuilderFeeRequest),
-  })
+  const response = await fetch(
+    `${API_BASE_URL}/api/agent/confirm-builder-fee`,
+    {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        main_wallet: mainWallet.toLowerCase(),
+        max_fee_rate: maxFeeRate,
+      } as ConfirmBuilderFeeRequest),
+    }
+  )
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}))

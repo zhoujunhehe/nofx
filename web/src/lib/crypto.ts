@@ -17,7 +17,6 @@ export interface WebCryptoEnvironmentInfo {
   isLocalhost?: boolean
 }
 
-
 export class CryptoService {
   private static publicKey: CryptoKey | null = null
   private static publicKeyPEM: string | null = null

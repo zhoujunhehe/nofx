@@ -1,4 +1,6 @@
 import { RouterProvider } from 'react-router-dom'
+import { WagmiProvider } from 'wagmi'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { LanguageProvider } from './contexts/LanguageContext'
 import { AuthProvider } from './contexts/AuthContext'
 import { ConfirmDialogProvider } from './components/ConfirmDialog'
@@ -7,6 +9,9 @@ import { useSystemConfig } from './hooks/useSystemConfig'
 import { useAuth } from './contexts/AuthContext'
 import { useLanguage } from './contexts/LanguageContext'
 import { t } from './i18n/translations'
+import { config } from './config/wagmi'
+
+const queryClient = new QueryClient()
 
 function LoadingScreen() {
   const { language } = useLanguage()
@@ -42,12 +47,16 @@ function AppContent() {
 
 export default function App() {
   return (
-    <LanguageProvider>
-      <AuthProvider>
-        <ConfirmDialogProvider>
-          <AppContent />
-        </ConfirmDialogProvider>
-      </AuthProvider>
-    </LanguageProvider>
+    <WagmiProvider config={config}>
+      <QueryClientProvider client={queryClient}>
+        <LanguageProvider>
+          <AuthProvider>
+            <ConfirmDialogProvider>
+              <AppContent />
+            </ConfirmDialogProvider>
+          </AuthProvider>
+        </LanguageProvider>
+      </QueryClientProvider>
+    </WagmiProvider>
   )
 }

@@ -381,7 +381,6 @@ func (d *PostgreSQLDatabase) GetExchanges(userID string) ([]*ExchangeConfig, err
 		       COALESCE(aster_user, '') AS aster_user,
 		       COALESCE(aster_signer, '') AS aster_signer,
 		       COALESCE(aster_private_key, '') AS aster_private_key,
-		       COALESCE(dex_wallet_private_key, '') AS dex_wallet_private_key,
 		       COALESCE(deleted, FALSE) AS deleted,
 		       created_at, updated_at
 		FROM exchanges
@@ -402,7 +401,6 @@ func (d *PostgreSQLDatabase) GetExchanges(userID string) ([]*ExchangeConfig, err
 			&exchange.Enabled, &exchange.APIKey, &exchange.SecretKey, &exchange.Testnet,
 			&exchange.HyperliquidWalletAddr, &exchange.AsterUser,
 			&exchange.AsterSigner, &exchange.AsterPrivateKey,
-			&exchange.DEXWalletPrivateKey,
 			&exchange.Deleted,
 			&exchange.CreatedAt, &exchange.UpdatedAt,
 		)
@@ -437,11 +435,6 @@ func (d *PostgreSQLDatabase) GetExchanges(userID string) ([]*ExchangeConfig, err
 		}
 		if decrypted, err := d.decryptValue(exchange.AsterPrivateKey, exchange.UserID, exchange.ID, "aster_private_key"); err == nil {
 			exchange.AsterPrivateKey = decrypted
-		} else {
-			return nil, err
-		}
-		if decrypted, err := d.decryptValue(exchange.DEXWalletPrivateKey, exchange.UserID, exchange.ID, "dex_wallet_private_key"); err == nil {
-			exchange.DEXWalletPrivateKey = decrypted
 		} else {
 			return nil, err
 		}

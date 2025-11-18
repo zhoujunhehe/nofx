@@ -5,6 +5,7 @@ import { Menu, X, ChevronDown } from 'lucide-react'
 import { t, type Language } from '../i18n/translations'
 import { Container } from './Container'
 import { useSystemConfig } from '../hooks/useSystemConfig'
+import { ConnectWallet } from './ConnectWallet'
 
 interface HeaderBarProps {
   onLoginClick?: () => void
@@ -483,6 +484,9 @@ export default function HeaderBar({
               )
             )}
 
+            {/* Connect Wallet Button - Only show when logged in */}
+            {isLoggedIn && <ConnectWallet />}
+
             {/* Language Toggle - Always at the rightmost */}
             <div className="relative" ref={dropdownRef}>
               <button
@@ -795,6 +799,13 @@ export default function HeaderBar({
                 {item.label}
               </a>
             ))}
+
+          {/* Connect Wallet - Mobile (only when logged in) */}
+          {isLoggedIn && (
+            <div className="py-2">
+              <ConnectWallet />
+            </div>
+          )}
 
           {/* Language Toggle */}
           <div className="py-2">

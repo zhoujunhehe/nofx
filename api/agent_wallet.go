@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"nofx/crypto"
 	"strings"
@@ -218,7 +219,7 @@ func (s *Server) getAgentWallet(mainWallet string) (*AgentWallet, error) {
 			authorization_signature,
 			status,
 			hyperliquid_chain,
-			COALESCE(builder_fee_authorized, 0) as builder_fee_authorized,
+			COALESCE(builder_fee_authorized, false) as builder_fee_authorized,
 			COALESCE(builder_fee_max_rate, 0) as builder_fee_max_rate,
 			builder_fee_authorized_at,
 			created_at,
@@ -353,7 +354,7 @@ func (s *Server) handleAuthorizeAgent(c *gin.Context) {
 	// 构建 ApproveAgent action (flat structure, matching Python SDK)
 	action := map[string]interface{}{
 		"type":             "approveAgent",
-		"signatureChainId": "0x66eee", // Hyperliquid L1 chain ID
+		"signatureChainId": "0x66eee", // Hyperliquid L1 chain ID (matches Python SDK)
 		"hyperliquidChain": wallet.HyperliquidChain,
 		"agentAddress":     wallet.AgentAddress,
 		"nonce":            req.Nonce,
@@ -385,6 +386,12 @@ func (s *Server) handleAuthorizeAgent(c *gin.Context) {
 		return
 	}
 
+	// 调试日志：打印发送给 Hyperliquid 的完整 payload
+	log.Printf("🔍 [DEBUG] Sending to Hyperliquid API: %s", hyperliquidAPI)
+	log.Printf("🔍 [DEBUG] Main Wallet: %s", mainWallet)
+	log.Printf("🔍 [DEBUG] Agent Address: %s", wallet.AgentAddress)
+	log.Printf("🔍 [DEBUG] Request Payload: %s", string(jsonData))
+
 	resp, err := http.Post(hyperliquidAPI, "application/json", strings.NewReader(string(jsonData)))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, AuthorizeAgentResponse{
@@ -405,12 +412,17 @@ func (s *Server) handleAuthorizeAgent(c *gin.Context) {
 		return
 	}
 
+	// 调试日志：打印 Hyperliquid 响应
+	respJSON, _ := json.Marshal(hyperliquidResp)
+	log.Printf("🔍 [DEBUG] Hyperliquid Response: %s", string(respJSON))
+
 	// 检查 Hyperliquid 是否返回错误
 	if status, ok := hyperliquidResp["status"].(string); ok && status == "err" {
 		errorMsg := "Unknown error"
 		if response, ok := hyperliquidResp["response"].(string); ok {
 			errorMsg = response
 		}
+		log.Printf("❌ [ERROR] Hyperliquid rejected: %s", errorMsg)
 		c.JSON(http.StatusBadRequest, AuthorizeAgentResponse{
 			Success: false,
 			Message: "Hyperliquid rejected authorization: " + errorMsg,
@@ -497,7 +509,7 @@ func (s *Server) handleConfirmBuilderFee(c *gin.Context) {
 	// 3. 更新数据库
 	updateQuery := `
 		UPDATE agent_wallets
-		SET builder_fee_authorized = 1,
+		SET builder_fee_authorized = true,
 		    builder_fee_max_rate = $1,
 		    builder_fee_authorized_at = CURRENT_TIMESTAMP
 		WHERE main_wallet = $2

@@ -7,6 +7,7 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
+	"database/sql"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/pem"
@@ -15,7 +16,10 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 	"sync"
+
+	"github.com/jmoiron/sqlx"
 )
 
 // EncryptionManager 加密管理器（單例模式）
@@ -370,4 +374,42 @@ func (em *EncryptionManager) RotateMasterKey() error {
 	log.Printf("🔐 新主密鑰: %s", encoded)
 
 	return nil
+}
+
+// ResolveHyperliquidPrivateKey 解析 Hyperliquid 私钥
+// 如果 apiKey 以 "BACKEND_AGENT:" 开头，则从数据库获取并解密后端托管的 Agent Wallet 私钥
+// 否则直接返回 apiKey
+func ResolveHyperliquidPrivateKey(db *sqlx.DB, apiKey string) (string, error) {
+	if !strings.HasPrefix(apiKey, "BACKEND_AGENT:") {
+		// 手动输入的私钥，直接返回
+		return apiKey, nil
+	}
+
+	// 提取 agent address
+	agentAddress := strings.TrimPrefix(apiKey, "BACKEND_AGENT:")
+
+	// 查询 agent wallet
+	query := `SELECT encrypted_private_key FROM agent_wallets WHERE agent_address = $1 AND status = 'ACTIVE'`
+	var encryptedPrivateKey string
+	err := db.Get(&encryptedPrivateKey, query, strings.ToLower(agentAddress))
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", fmt.Errorf("未找到激活的 Agent Wallet: %s", agentAddress)
+		}
+		return "", fmt.Errorf("查询 Agent Wallet 失败: %w", err)
+	}
+
+	// 获取加密管理器
+	em, err := GetEncryptionManager()
+	if err != nil {
+		return "", fmt.Errorf("获取加密管理器失败: %w", err)
+	}
+
+	// 解密私钥
+	privateKeyHex, err := em.DecryptFromDatabase(encryptedPrivateKey)
+	if err != nil {
+		return "", fmt.Errorf("解密私钥失败: %w", err)
+	}
+
+	return privateKeyHex, nil
 }

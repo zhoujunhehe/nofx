@@ -11,10 +11,12 @@ import {
   WebCryptoEnvironmentCheck,
   type WebCryptoCheckStatus,
 } from '../WebCryptoEnvironmentCheck'
-import { BookOpen, Trash2, HelpCircle } from 'lucide-react'
+import { BookOpen, Trash2, HelpCircle, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { Tooltip } from './Tooltip'
 import { getShortName } from './utils'
+import { getAgentWallet, type AgentWallet } from '../../lib/agentWalletBackend'
+import { useAccount } from 'wagmi'
 
 interface ExchangeConfigModalProps {
   allExchanges: Exchange[]
@@ -42,6 +44,8 @@ export function ExchangeConfigModal({
   onClose,
   language,
 }: ExchangeConfigModalProps) {
+  const { address } = useAccount()
+
   const [selectedExchangeId, setSelectedExchangeId] = useState(
     editingExchangeId || ''
   )
@@ -67,8 +71,10 @@ export function ExchangeConfigModal({
   const [asterSigner, setAsterSigner] = useState('')
   const [asterPrivateKey, setAsterPrivateKey] = useState('')
 
-  // Hyperliquid 特定字段
-  const [hyperliquidWalletAddr, setHyperliquidWalletAddr] = useState('')
+  // Hyperliquid 特定字段 - 后端生成的 Agent Wallet
+  const [backendAgentWallet, setBackendAgentWallet] =
+    useState<AgentWallet | null>(null)
+  const [loadingAgentWallet, setLoadingAgentWallet] = useState(false)
 
   // 安全输入状态
   const [secureInputTarget, setSecureInputTarget] = useState<
@@ -92,9 +98,6 @@ export function ExchangeConfigModal({
       setAsterUser(selectedExchange.asterUser || '')
       setAsterSigner(selectedExchange.asterSigner || '')
       setAsterPrivateKey('') // Don't load existing private key for security
-
-      // Hyperliquid 字段
-      setHyperliquidWalletAddr(selectedExchange.hyperliquidWalletAddr || '')
     }
   }, [editingExchangeId, selectedExchange])
 
@@ -115,6 +118,31 @@ export function ExchangeConfigModal({
         })
     }
   }, [selectedExchangeId])
+
+  // 加载后端 Agent Wallet（当选择 Hyperliquid 且连接了钱包时）
+  useEffect(() => {
+    if (selectedExchangeId === 'hyperliquid' && address && !editingExchangeId) {
+      setLoadingAgentWallet(true)
+      getAgentWallet(address)
+        .then((response) => {
+          if (response.success && response.data) {
+            setBackendAgentWallet(response.data)
+          } else {
+            setBackendAgentWallet(null)
+          }
+        })
+        .catch((err) => {
+          // 404 means no agent wallet exists, which is fine
+          if (!err.message.includes('404')) {
+            console.error('Failed to load agent wallet:', err)
+          }
+          setBackendAgentWallet(null)
+        })
+        .finally(() => {
+          setLoadingAgentWallet(false)
+        })
+    }
+  }, [selectedExchangeId, address, editingExchangeId])
 
   const handleCopyIP = async (ip: string) => {
     try {
@@ -184,17 +212,6 @@ export function ExchangeConfigModal({
     setSecureInputTarget(null)
   }
 
-  // 掩盖敏感数据显示
-  const maskSecret = (secret: string) => {
-    if (!secret || secret.length === 0) return ''
-    if (secret.length <= 8) return '*'.repeat(secret.length)
-    return (
-      secret.slice(0, 4) +
-      '*'.repeat(Math.max(secret.length - 8, 4)) +
-      secret.slice(-4)
-    )
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedExchangeId) return
@@ -204,13 +221,21 @@ export function ExchangeConfigModal({
       if (!apiKey.trim() || !secretKey.trim()) return
       await onSave(selectedExchangeId, apiKey.trim(), secretKey.trim(), testnet)
     } else if (selectedExchange?.id === 'hyperliquid') {
-      if (!apiKey.trim() || !hyperliquidWalletAddr.trim()) return // 验证私钥和钱包地址
+      // 使用后端生成的 Agent Wallet（使用特殊标识 "BACKEND_AGENT"）
+      if (!backendAgentWallet) {
+        toast.error(
+          language === 'zh'
+            ? '请先创建 Agent Wallet'
+            : 'Please create Agent Wallet first'
+        )
+        return
+      }
       await onSave(
         selectedExchangeId,
-        apiKey.trim(),
+        'BACKEND_AGENT:' + backendAgentWallet.agent_address,
         '',
         testnet,
-        hyperliquidWalletAddr.trim()
+        backendAgentWallet.main_wallet
       )
     } else if (selectedExchange?.id === 'aster') {
       if (!asterUser.trim() || !asterSigner.trim() || !asterPrivateKey.trim())
@@ -723,107 +748,251 @@ export function ExchangeConfigModal({
                       </div>
                     </div>
 
-                    {/* Agent Private Key 字段 */}
-                    <div>
-                      <label
-                        className="block text-sm font-semibold mb-2"
-                        style={{ color: '#EAECEF' }}
-                      >
-                        {t('hyperliquidAgentPrivateKey', language)}
-                      </label>
-                      <div className="flex flex-col gap-2">
-                        <div className="flex gap-2">
+                    {/* 后端 Agent Wallet 状态 */}
+                    {!editingExchangeId && (
+                      <>
+                        {/* 未连接钱包提示 */}
+                        {!address && (
+                          <div
+                            className="p-4 rounded mb-4"
+                            style={{
+                              background: 'rgba(248, 81, 73, 0.1)',
+                              border: '1px solid rgba(248, 81, 73, 0.3)',
+                            }}
+                          >
+                            <div
+                              className="text-sm font-semibold mb-2"
+                              style={{ color: '#F85149' }}
+                            >
+                              {language === 'zh'
+                                ? '⚠️ 需要连接钱包'
+                                : '⚠️ Wallet Connection Required'}
+                            </div>
+                            <div
+                              className="text-xs mb-3"
+                              style={{ color: '#848E9C' }}
+                            >
+                              {language === 'zh'
+                                ? '请先访问 Agent Wallet 页面并连接您的 Web3 钱包（MetaMask、WalletConnect 等），然后创建 Agent Wallet。'
+                                : 'Please visit the Agent Wallet page and connect your Web3 wallet (MetaMask, WalletConnect, etc.), then create an Agent Wallet.'}
+                            </div>
+                            <a
+                              href="/agent-wallet"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-block px-3 py-2 rounded text-sm font-semibold transition-all hover:scale-105"
+                              style={{
+                                background: '#F85149',
+                                color: '#FFF',
+                              }}
+                            >
+                              {language === 'zh'
+                                ? '前往 Agent Wallet 页面 →'
+                                : 'Go to Agent Wallet →'}
+                            </a>
+                          </div>
+                        )}
+
+                        {loadingAgentWallet && (
+                          <div
+                            className="flex items-center gap-2 mb-4 text-xs"
+                            style={{ color: '#848E9C' }}
+                          >
+                            <RefreshCw className="w-3 h-3 animate-spin" />
+                            {language === 'zh'
+                              ? '正在加载 Agent Wallet...'
+                              : 'Loading Agent Wallet...'}
+                          </div>
+                        )}
+                        {!loadingAgentWallet &&
+                          !backendAgentWallet &&
+                          address && (
+                            <div
+                              className="p-4 rounded mb-4"
+                              style={{
+                                background: 'rgba(240, 185, 11, 0.1)',
+                                border: '1px solid rgba(240, 185, 11, 0.3)',
+                              }}
+                            >
+                              <div
+                                className="text-sm font-semibold mb-2"
+                                style={{ color: '#F0B90B' }}
+                              >
+                                {language === 'zh'
+                                  ? '⚠️ 需要创建 Agent Wallet'
+                                  : '⚠️ Agent Wallet Required'}
+                              </div>
+                              <div
+                                className="text-xs mb-3"
+                                style={{ color: '#848E9C' }}
+                              >
+                                {language === 'zh'
+                                  ? 'Hyperliquid 需要使用后端生成的 Agent Wallet。请先前往 Agent Wallet 页面创建并授权。'
+                                  : 'Hyperliquid requires a backend-generated Agent Wallet. Please create and authorize one in the Agent Wallet page.'}
+                              </div>
+                              <a
+                                href="/agent-wallet"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-block px-3 py-2 rounded text-sm font-semibold transition-all hover:scale-105"
+                                style={{
+                                  background: '#F0B90B',
+                                  color: '#000',
+                                }}
+                              >
+                                {language === 'zh'
+                                  ? '前往创建 Agent Wallet →'
+                                  : 'Go to Agent Wallet →'}
+                              </a>
+                            </div>
+                          )}
+                      </>
+                    )}
+
+                    {/* 显示 Agent Wallet 信息 */}
+                    {backendAgentWallet ? (
+                      /* 使用后端生成的 Agent Wallet */
+                      <>
+                        <div
+                          className="p-4 rounded mb-4"
+                          style={{
+                            background: 'rgba(14, 203, 129, 0.1)',
+                            border: '1px solid rgba(14, 203, 129, 0.2)',
+                          }}
+                        >
+                          <div className="space-y-2">
+                            <div>
+                              <span
+                                className="text-xs"
+                                style={{ color: '#848E9C' }}
+                              >
+                                {language === 'zh'
+                                  ? 'Agent 地址：'
+                                  : 'Agent Address:'}
+                              </span>
+                              <code
+                                className="block mt-1 px-2 py-1 rounded font-mono text-xs"
+                                style={{
+                                  background: '#0B0E11',
+                                  color: '#0ECB81',
+                                }}
+                              >
+                                {backendAgentWallet.agent_address}
+                              </code>
+                            </div>
+                            <div>
+                              <span
+                                className="text-xs"
+                                style={{ color: '#848E9C' }}
+                              >
+                                {language === 'zh'
+                                  ? 'Main Wallet：'
+                                  : 'Main Wallet:'}
+                              </span>
+                              <code
+                                className="block mt-1 px-2 py-1 rounded font-mono text-xs"
+                                style={{
+                                  background: '#0B0E11',
+                                  color: '#0ECB81',
+                                }}
+                              >
+                                {backendAgentWallet.main_wallet}
+                              </code>
+                            </div>
+                            <div>
+                              <span
+                                className="text-xs"
+                                style={{ color: '#848E9C' }}
+                              >
+                                {language === 'zh' ? '状态：' : 'Status:'}
+                              </span>
+                              <span
+                                className="ml-2 px-2 py-0.5 rounded text-xs font-medium"
+                                style={{
+                                  background: backendAgentWallet.status === 'ACTIVE'
+                                    ? 'rgba(14, 203, 129, 0.2)'
+                                    : 'rgba(240, 185, 11, 0.2)',
+                                  color: backendAgentWallet.status === 'ACTIVE' ? '#0ECB81' : '#F0B90B',
+                                }}
+                              >
+                                {backendAgentWallet.status}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* 如果状态不是 ACTIVE，显示授权提示 */}
+                          {backendAgentWallet.status !== 'ACTIVE' && (
+                            <div
+                              className="mt-3 p-3 rounded"
+                              style={{
+                                background: 'rgba(240, 185, 11, 0.1)',
+                                border: '1px solid rgba(240, 185, 11, 0.3)',
+                              }}
+                            >
+                              <p className="text-xs mb-2" style={{ color: '#F0B90B' }}>
+                                <strong>⚠️ {language === 'zh' ? '需要授权' : 'Authorization Required'}</strong>
+                              </p>
+                              <p className="text-xs mb-3" style={{ color: '#848E9C' }}>
+                                {language === 'zh'
+                                  ? 'Agent 钱包需要完成授权才能使用。点击下方按钮前往授权页面（需要 2 次签名）。'
+                                  : 'Agent wallet needs to be authorized before use. Click the button below to go to the authorization page (2 signatures required).'}
+                              </p>
+                              <a
+                                href="/agent-wallet-backend"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 px-4 py-2 rounded text-xs font-semibold transition-all"
+                                style={{
+                                  background: '#F0B90B',
+                                  color: '#000',
+                                  textDecoration: 'none',
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.transform = 'translateY(-1px)'
+                                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(240, 185, 11, 0.3)'
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.transform = 'translateY(0)'
+                                  e.currentTarget.style.boxShadow = 'none'
+                                }}
+                              >
+                                🔐 {language === 'zh' ? '前往授权 Agent 钱包' : 'Go to Authorize Agent Wallet'}
+                              </a>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Main Wallet Address (自动填充) */}
+                        <div>
+                          <label
+                            className="block text-sm font-semibold mb-2"
+                            style={{ color: '#EAECEF' }}
+                          >
+                            {t('hyperliquidMainWalletAddress', language)}
+                          </label>
                           <input
                             type="text"
-                            value={maskSecret(apiKey)}
+                            value={backendAgentWallet.main_wallet}
                             readOnly
-                            placeholder={t(
-                              'enterHyperliquidAgentPrivateKey',
-                              language
-                            )}
                             className="w-full px-3 py-2 rounded"
                             style={{
                               background: '#0B0E11',
                               border: '1px solid #2B3139',
-                              color: '#EAECEF',
+                              color: '#848E9C',
+                              cursor: 'not-allowed',
                             }}
                           />
-                          <button
-                            type="button"
-                            onClick={() => setSecureInputTarget('hyperliquid')}
-                            className="px-3 py-2 rounded text-xs font-semibold transition-all hover:scale-105"
-                            style={{
-                              background: '#F0B90B',
-                              color: '#000',
-                              whiteSpace: 'nowrap',
-                            }}
+                          <div
+                            className="text-xs mt-1"
+                            style={{ color: '#848E9C' }}
                           >
-                            {apiKey
-                              ? t('secureInputReenter', language)
-                              : t('secureInputButton', language)}
-                          </button>
-                          {apiKey && (
-                            <button
-                              type="button"
-                              onClick={() => setApiKey('')}
-                              className="px-3 py-2 rounded text-xs font-semibold transition-all hover:scale-105"
-                              style={{
-                                background: '#1B1F2B',
-                                color: '#848E9C',
-                                whiteSpace: 'nowrap',
-                              }}
-                            >
-                              {t('secureInputClear', language)}
-                            </button>
-                          )}
-                        </div>
-                        {apiKey && (
-                          <div className="text-xs" style={{ color: '#848E9C' }}>
-                            {t('secureInputHint', language)}
+                            {language === 'zh'
+                              ? '使用后端托管的 Agent Wallet，无需手动输入私钥'
+                              : 'Using backend-hosted Agent Wallet, no private key input needed'}
                           </div>
-                        )}
-                      </div>
-                      <div
-                        className="text-xs mt-1"
-                        style={{ color: '#848E9C' }}
-                      >
-                        {t('hyperliquidAgentPrivateKeyDesc', language)}
-                      </div>
-                    </div>
-
-                    {/* Main Wallet Address 字段 */}
-                    <div>
-                      <label
-                        className="block text-sm font-semibold mb-2"
-                        style={{ color: '#EAECEF' }}
-                      >
-                        {t('hyperliquidMainWalletAddress', language)}
-                      </label>
-                      <input
-                        type="text"
-                        value={hyperliquidWalletAddr}
-                        onChange={(e) =>
-                          setHyperliquidWalletAddr(e.target.value)
-                        }
-                        placeholder={t(
-                          'enterHyperliquidMainWalletAddress',
-                          language
-                        )}
-                        className="w-full px-3 py-2 rounded"
-                        style={{
-                          background: '#0B0E11',
-                          border: '1px solid #2B3139',
-                          color: '#EAECEF',
-                        }}
-                        required
-                      />
-                      <div
-                        className="text-xs mt-1"
-                        style={{ color: '#848E9C' }}
-                      >
-                        {t('hyperliquidMainWalletAddressDesc', language)}
-                      </div>
-                    </div>
+                        </div>
+                      </>
+                    ) : null}
                   </>
                 )}
               </>
@@ -853,7 +1022,8 @@ export function ExchangeConfigModal({
                     !secretKey.trim() ||
                     !passphrase.trim())) ||
                 (selectedExchange.id === 'hyperliquid' &&
-                  (!apiKey.trim() || !hyperliquidWalletAddr.trim())) || // 验证私钥和钱包地址
+                  (!backendAgentWallet ||
+                    backendAgentWallet.status !== 'ACTIVE')) || // 验证后端 Agent Wallet 存在且已授权
                 (selectedExchange.id === 'aster' &&
                   (!asterUser.trim() ||
                     !asterSigner.trim() ||

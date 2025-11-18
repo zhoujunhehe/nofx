@@ -7,8 +7,16 @@
  */
 
 import { useState, useEffect } from 'react'
-import { Wallet, RefreshCw, Check, AlertCircle, ArrowRight, Shield, Key } from 'lucide-react'
-import { useAccount, useWalletClient } from 'wagmi'
+import {
+  Wallet,
+  RefreshCw,
+  Check,
+  AlertCircle,
+  ArrowRight,
+  Shield,
+  Key,
+} from 'lucide-react'
+import { useAccount, useWalletClient, useConnect } from 'wagmi'
 import {
   createAgentWallet,
   getAgentWallet,
@@ -17,7 +25,10 @@ import {
   type AgentWallet,
 } from '../lib/agentWalletBackend'
 import { signApproveAgent } from '../lib/hyperliquidApproveAgent'
-import { approveHyperliquidBuilderFee } from '../lib/hyperliquidBuilderFee'
+import {
+  approveHyperliquidBuilderFee,
+  queryAccountStatus
+} from '../lib/hyperliquidBuilderFee'
 import { useLanguage } from '../contexts/LanguageContext'
 
 const BUILDER_ADDRESS = '0x891dc6f05ad47a3c1a05da55e7a7517971faaf0d' // NOFX Builder Address
@@ -26,11 +37,23 @@ export function AgentWalletBackendPage() {
   const { language } = useLanguage()
   const { address, isConnected } = useAccount()
   const { data: walletClient } = useWalletClient()
+  const { connect, connectors } = useConnect()
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [authStatus, setAuthStatus] = useState<string | null>(null)
   const [agentWallet, setAgentWallet] = useState<AgentWallet | null>(null)
+  const [hyperliquidBalance, setHyperliquidBalance] = useState<number | null>(null)
+  const [balanceLoading, setBalanceLoading] = useState(false)
+
+  // 简单直接的连接：点击立即连接第一个连接器（类似 PR #19）
+  const handleQuickConnect = () => {
+    // 优先连接第一个连接器（通常是 Injected/MetaMask）
+    const firstConnector = connectors[0]
+    if (firstConnector) {
+      connect({ connector: firstConnector })
+    }
+  }
 
   // 查询现有的 Agent 钱包
   useEffect(() => {
@@ -39,19 +62,71 @@ export function AgentWalletBackendPage() {
     }
   }, [address, isConnected])
 
+  const loadHyperliquidBalance = async (walletAddress: string, chain: 'Mainnet' | 'Testnet') => {
+    try {
+      setBalanceLoading(true)
+      const accountStatus = await queryAccountStatus(walletAddress, chain)
+      setHyperliquidBalance(accountStatus.accountValue)
+      console.log('💰 Hyperliquid Balance:', accountStatus.accountValue, 'USDC')
+    } catch (err) {
+      console.error('Failed to load Hyperliquid balance:', err)
+      setHyperliquidBalance(null)
+    } finally {
+      setBalanceLoading(false)
+    }
+  }
+
   const loadAgentWallet = async () => {
-    if (!address) return
+    if (!address) {
+      console.log('⚠️  loadAgentWallet: No address available')
+      return
+    }
+
+    console.log('🔍 loadAgentWallet: Starting for address:', address)
 
     try {
       setLoading(true)
+      setError(null) // 清除之前的错误
+
       const response = await getAgentWallet(address)
+      console.log('📡 loadAgentWallet: API response:', JSON.stringify(response, null, 2))
+
       if (response.success && response.data) {
         setAgentWallet(response.data)
+        console.log('✅ Agent Wallet loaded successfully:', {
+          agent_address: response.data.agent_address,
+          status: response.data.status,
+          main_wallet: response.data.main_wallet
+        })
+
+        // 查询 Hyperliquid 余额
+        await loadHyperliquidBalance(response.data.main_wallet, response.data.hyperliquid_chain as 'Mainnet' | 'Testnet')
+      } else {
+        console.warn('⚠️  getAgentWallet returned unexpected response:', {
+          success: response.success,
+          hasData: !!response.data,
+          message: response.message
+        })
+        setAgentWallet(null)
       }
     } catch (err: any) {
       // 404 means no agent wallet exists yet, which is fine
-      if (!err.message.includes('404')) {
-        console.error('Failed to load agent wallet:', err)
+      if (err.message.includes('404')) {
+        console.log('ℹ️  No Agent Wallet found for address:', address)
+        setAgentWallet(null)
+
+        // 即使没有 Agent Wallet，也查询 Hyperliquid 余额
+        if (address) {
+          await loadHyperliquidBalance(address, 'Mainnet')
+        }
+      } else {
+        console.error('❌ Failed to load agent wallet:', err)
+        // 显示错误信息给用户
+        setError(
+          language === 'zh'
+            ? `加载 Agent 钱包失败: ${err.message}`
+            : `Failed to load Agent Wallet: ${err.message}`
+        )
       }
     } finally {
       setLoading(false)
@@ -60,7 +135,9 @@ export function AgentWalletBackendPage() {
 
   const handleCreateAgent = async () => {
     if (!address || !isConnected) {
-      setError(language === 'zh' ? '请先连接钱包' : 'Please connect wallet first')
+      setError(
+        language === 'zh' ? '请先连接钱包' : 'Please connect wallet first'
+      )
       return
     }
 
@@ -72,19 +149,56 @@ export function AgentWalletBackendPage() {
       const response = await createAgentWallet(address, 'Mainnet')
 
       if (response.success) {
+        console.log('✅ Agent Wallet created:', response)
+
         setAuthStatus(
           language === 'zh'
-            ? `成功创建 Agent 钱包！地址：${response.agent_address}`
-            : `Agent wallet created! Address: ${response.agent_address}`
+            ? `✅ Agent 钱包创建成功！\n\n地址：${response.agent_address}\n\n正在加载授权界面...`
+            : `✅ Agent wallet created!\n\nAddress: ${response.agent_address}\n\nLoading authorization interface...`
         )
-        // 重新加载
+
+        // 等待 800ms 确保数据库事务提交完成
+        console.log('⏳ Waiting 800ms for database transaction to commit...')
+        await new Promise(resolve => setTimeout(resolve, 800))
+
+        // 重新加载 Agent Wallet 状态
+        console.log('🔄 Reloading Agent Wallet status...')
         await loadAgentWallet()
+
+        // 3秒后清除成功消息，显示授权按钮
+        setTimeout(() => {
+          console.log('🧹 Clearing success message to show authorization button')
+          setAuthStatus(null)
+        }, 3000)
       } else {
         setError(response.message)
       }
     } catch (err: any) {
-      console.error('Create agent wallet failed:', err)
-      setError(err.message || 'Unknown error')
+      console.error('❌ Create agent wallet failed:', err)
+
+      // 检查是否是重复创建错误
+      if (err.message && err.message.includes('duplicate key')) {
+        console.log('🔄 Duplicate key detected, reloading existing Agent Wallet...')
+        setAuthStatus(
+          language === 'zh'
+            ? '✅ Agent 钱包已存在！正在加载...'
+            : '✅ Agent wallet already exists! Loading...'
+        )
+
+        // 等待一下再重新加载
+        await new Promise(resolve => setTimeout(resolve, 500))
+
+        // 重新加载现有的 Agent Wallet
+        await loadAgentWallet()
+
+        // 清除消息
+        setTimeout(() => {
+          setAuthStatus(null)
+          setError(null)
+        }, 3000)
+      } else {
+        setError(err.message || 'Unknown error')
+      }
     } finally {
       setLoading(false)
     }
@@ -92,7 +206,11 @@ export function AgentWalletBackendPage() {
 
   const handleAuthorizeAgent = async () => {
     if (!address || !isConnected || !walletClient || !agentWallet) {
-      setError(language === 'zh' ? '请先连接钱包並创建 Agent' : 'Please connect wallet and create Agent first')
+      setError(
+        language === 'zh'
+          ? '请先连接钱包并创建 Agent'
+          : 'Please connect wallet and create Agent first'
+      )
       return
     }
 
@@ -102,13 +220,22 @@ export function AgentWalletBackendPage() {
       setAuthStatus(null)
 
       // ===== 步骤 1: 用户签名 ApproveAgent 消息 =====
-      setAuthStatus(language === 'zh' ? '步骤 1/2: 授权 Agent 钱包...' : 'Step 1/2: Authorizing Agent Wallet...')
+      setAuthStatus(
+        language === 'zh'
+          ? '步骤 1/2: 授权 Agent 钱包...'
+          : 'Step 1/2: Authorizing Agent Wallet...'
+      )
 
-      const { signature, signatureHex, nonce } = await signApproveAgent(walletClient, {
-        agentAddress: agentWallet.agent_address,
-        agentName: '', // 可选：可以添加 UI 讓用户输入 Agent 名稱
-        hyperliquidChain: agentWallet.hyperliquid_chain as 'Mainnet' | 'Testnet',
-      })
+      const { signature, signatureHex, nonce } = await signApproveAgent(
+        walletClient,
+        {
+          agentAddress: agentWallet.agent_address,
+          agentName: '', // 可选：可以添加 UI 讓用户输入 Agent 名稱
+          hyperliquidChain: agentWallet.hyperliquid_chain as
+            | 'Mainnet'
+            | 'Testnet',
+        }
+      )
 
       // 提交到后端
       const response = await authorizeAgent({
@@ -127,13 +254,22 @@ export function AgentWalletBackendPage() {
       console.log('✅ Step 1/2: Agent Wallet authorized')
 
       // ===== 步骤 2: 授权 Builder Fee (0.1%) =====
-      setAuthStatus(language === 'zh' ? '步骤 2/2: 授权平台费率 (0.1%)...' : 'Step 2/2: Authorizing Platform Fee (0.1%)...')
+      setAuthStatus(
+        language === 'zh'
+          ? '步骤 2/2: 授权平台费率 (0.1%)...'
+          : 'Step 2/2: Authorizing Platform Fee (0.1%)...'
+      )
 
-      const builderFeeResult = await approveHyperliquidBuilderFee(walletClient, {
-        builderAddress: BUILDER_ADDRESS,
-        maxFeeRate: 100, // 固定 0.1%
-        hyperliquidChain: agentWallet.hyperliquid_chain as 'Mainnet' | 'Testnet',
-      })
+      const builderFeeResult = await approveHyperliquidBuilderFee(
+        walletClient,
+        {
+          builderAddress: BUILDER_ADDRESS,
+          maxFeeRate: 100, // 固定 0.1%
+          hyperliquidChain: agentWallet.hyperliquid_chain as
+            | 'Mainnet'
+            | 'Testnet',
+        }
+      )
 
       if (!builderFeeResult.success) {
         // Agent 授权成功但 Builder Fee 失敗
@@ -149,13 +285,20 @@ export function AgentWalletBackendPage() {
       console.log('✅ Step 2/2: Builder Fee authorized')
 
       // ===== 步骤 3: 通知后端 Builder Fee 已授权 =====
-      setAuthStatus(language === 'zh' ? '步骤 3/3: 保存授权状态...' : 'Step 3/3: Saving authorization status...')
+      setAuthStatus(
+        language === 'zh'
+          ? '步骤 3/3: 保存授权状态...'
+          : 'Step 3/3: Saving authorization status...'
+      )
 
       try {
         await confirmBuilderFee(address, 100) // 100 基点 = 0.1%
         console.log('✅ Step 3/3: Builder Fee confirmed in backend')
       } catch (confirmError: any) {
-        console.warn('⚠️  Builder Fee confirmation failed (non-critical):', confirmError)
+        console.warn(
+          '⚠️  Builder Fee confirmation failed (non-critical):',
+          confirmError
+        )
         // 不阻塞流程，因为链上授权已成功
       }
 
@@ -180,16 +323,21 @@ export function AgentWalletBackendPage() {
   }
 
   return (
-    <div className="min-h-screen p-8" style={{ background: '#000000', color: '#EAECEF' }}>
+    <div
+      className="min-h-screen p-8"
+      style={{ background: '#000000', color: '#EAECEF' }}
+    >
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2" style={{ color: '#EAECEF' }}>
-            {language === 'zh' ? 'Agent 钱包（后端生成）' : 'Agent Wallet (Backend Generated)'}
+            {language === 'zh'
+              ? 'Agent 钱包（后端生成）'
+              : 'Agent Wallet (Backend Generated)'}
           </h1>
           <p style={{ color: '#848E9C' }}>
             {language === 'zh'
-              ? '后端生成並托管 Agent 钱包，用户无需保存私钥'
+              ? '后端生成并托管 Agent 钱包，用户无需保存私钥'
               : 'Backend generates and hosts Agent wallet, no private key management needed'}
           </p>
         </div>
@@ -222,11 +370,39 @@ export function AgentWalletBackendPage() {
               </div>
             </div>
           ) : (
-            <div className="flex items-center gap-2" style={{ color: '#F0B90B' }}>
-              <AlertCircle className="h-4 w-4" />
-              <span className="text-sm">
-                {language === 'zh' ? '请使用右上角按钮连接钱包' : 'Please connect wallet using button above'}
-              </span>
+            <div className="space-y-3">
+              <div
+                className="flex items-center gap-2"
+                style={{ color: '#F0B90B' }}
+              >
+                <AlertCircle className="h-4 w-4" />
+                <span className="text-sm">
+                  {language === 'zh'
+                    ? '尚未连接钱包'
+                    : 'Wallet not connected'}
+                </span>
+              </div>
+              <button
+                onClick={handleQuickConnect}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all font-medium text-sm"
+                style={{
+                  background: 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)',
+                  color: '#ffffff',
+                  border: '1px solid rgba(96, 165, 250, 0.3)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-1px)'
+                  e.currentTarget.style.boxShadow =
+                    '0 4px 12px rgba(96, 165, 250, 0.3)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.boxShadow = 'none'
+                }}
+              >
+                <Wallet className="h-4 w-4" />
+                {language === 'zh' ? '连接钱包' : 'Connect Wallet'}
+              </button>
             </div>
           )}
         </div>
@@ -235,13 +411,40 @@ export function AgentWalletBackendPage() {
         {agentWallet ? (
           <div
             className="rounded-xl p-6 mb-6"
-            style={{ background: 'rgba(14, 203, 129, 0.1)', border: '1px solid rgba(14, 203, 129, 0.2)' }}
+            style={{
+              background: 'rgba(14, 203, 129, 0.1)',
+              border: '1px solid rgba(14, 203, 129, 0.2)',
+            }}
           >
-            <div className="flex items-center gap-3 mb-4">
-              <Shield className="h-5 w-5" style={{ color: '#0ECB81' }} />
-              <h2 className="text-lg font-semibold" style={{ color: '#0ECB81' }}>
-                {language === 'zh' ? 'Agent 钱包已创建' : 'Agent Wallet Created'}
-              </h2>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <Shield className="h-5 w-5" style={{ color: '#0ECB81' }} />
+                <h2
+                  className="text-lg font-semibold"
+                  style={{ color: '#0ECB81' }}
+                >
+                  {language === 'zh'
+                    ? 'Agent 钱包已创建'
+                    : 'Agent Wallet Created'}
+                </h2>
+              </div>
+              <button
+                onClick={() => {
+                  console.log('🔄 Manual refresh triggered by user')
+                  loadAgentWallet()
+                }}
+                disabled={loading}
+                className="flex items-center gap-1 px-3 py-1.5 rounded transition-colors text-xs font-medium disabled:opacity-50"
+                style={{
+                  background: 'rgba(14, 203, 129, 0.1)',
+                  border: '1px solid rgba(14, 203, 129, 0.3)',
+                  color: '#0ECB81',
+                }}
+                title={language === 'zh' ? '刷新状态' : 'Refresh Status'}
+              >
+                <RefreshCw className="h-3 w-3" />
+                {language === 'zh' ? '刷新' : 'Refresh'}
+              </button>
             </div>
 
             <div className="space-y-3">
@@ -265,8 +468,11 @@ export function AgentWalletBackendPage() {
                   className="ml-2 px-2 py-1 rounded text-xs font-medium"
                   style={{
                     background:
-                      agentWallet.status === 'ACTIVE' ? 'rgba(14, 203, 129, 0.2)' : 'rgba(240, 185, 11, 0.2)',
-                    color: agentWallet.status === 'ACTIVE' ? '#0ECB81' : '#F0B90B',
+                      agentWallet.status === 'ACTIVE'
+                        ? 'rgba(14, 203, 129, 0.2)'
+                        : 'rgba(240, 185, 11, 0.2)',
+                    color:
+                      agentWallet.status === 'ACTIVE' ? '#0ECB81' : '#F0B90B',
                   }}
                 >
                   {agentWallet.status}
@@ -284,21 +490,143 @@ export function AgentWalletBackendPage() {
 
               {/* Authorization Button - only show when status is INIT */}
               {agentWallet.status === 'INIT' && (
-                <div className="mt-4 pt-4" style={{ borderTop: '1px solid #2b3139' }}>
+                <div
+                  className="mt-4 pt-4"
+                  style={{ borderTop: '1px solid #2b3139' }}
+                >
+                  {/* 钱包地址匹配检查 */}
+                  {address && address.toLowerCase() !== agentWallet.main_wallet.toLowerCase() && (
+                    <div
+                      className="rounded-lg p-4 mb-4"
+                      style={{
+                        background: 'rgba(246, 70, 93, 0.1)',
+                        border: '1px solid rgba(246, 70, 93, 0.3)',
+                      }}
+                    >
+                      <p className="text-sm mb-2" style={{ color: '#F6465D' }}>
+                        <strong>❌ {language === 'zh' ? '钱包地址不匹配' : 'Wallet Address Mismatch'}</strong>
+                      </p>
+                      <p className="text-sm mb-2" style={{ color: '#848E9C' }}>
+                        {language === 'zh'
+                          ? '当前连接的钱包地址与创建此 Agent 的钱包地址不一致。'
+                          : 'The currently connected wallet address does not match the wallet that created this Agent.'}
+                      </p>
+                      <div className="text-xs space-y-1" style={{ color: '#848E9C' }}>
+                        <div>
+                          {language === 'zh' ? '创建时使用：' : 'Created with:'}
+                          <code className="ml-1 px-2 py-0.5 rounded" style={{ background: '#0B0E11', color: '#0ECB81' }}>
+                            {agentWallet.main_wallet.slice(0, 10)}...{agentWallet.main_wallet.slice(-8)}
+                          </code>
+                        </div>
+                        <div>
+                          {language === 'zh' ? '当前连接：' : 'Currently connected:'}
+                          <code className="ml-1 px-2 py-0.5 rounded" style={{ background: '#0B0E11', color: '#F6465D' }}>
+                            {address.slice(0, 10)}...{address.slice(-8)}
+                          </code>
+                        </div>
+                      </div>
+                      <p className="text-sm mt-3" style={{ color: '#F6465D' }}>
+                        {language === 'zh'
+                          ? '请在钱包中切换到创建此 Agent 的账户，或者断开当前钱包重新连接正确的账户。'
+                          : 'Please switch to the account that created this Agent in your wallet, or disconnect and reconnect with the correct account.'}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* 前提条件警告 + 余额显示 */}
+                  <div
+                    className="rounded-lg p-4 mb-4"
+                    style={{
+                      background: hyperliquidBalance && hyperliquidBalance > 0
+                        ? 'rgba(14, 203, 129, 0.1)'
+                        : 'rgba(240, 185, 11, 0.1)',
+                      border: hyperliquidBalance && hyperliquidBalance > 0
+                        ? '1px solid rgba(14, 203, 129, 0.3)'
+                        : '1px solid rgba(240, 185, 11, 0.3)',
+                    }}
+                  >
+                    <p className="text-sm mb-2" style={{ color: hyperliquidBalance && hyperliquidBalance > 0 ? '#0ECB81' : '#F0B90B' }}>
+                      <strong>
+                        {hyperliquidBalance && hyperliquidBalance > 0 ? '✅' : '⚠️'} {language === 'zh' ? '授权前提条件' : 'Prerequisites for Authorization'}
+                      </strong>
+                    </p>
+
+                    {/* 余额显示 */}
+                    <div className="mb-3">
+                      <div className="text-sm mb-1" style={{ color: '#848E9C' }}>
+                        {language === 'zh' ? 'Hyperliquid 余额：' : 'Hyperliquid Balance:'}
+                      </div>
+                      <div className="text-lg font-semibold" style={{
+                        color: balanceLoading ? '#848E9C' : (
+                          hyperliquidBalance === null ? '#F6465D' :
+                          hyperliquidBalance > 0 ? '#0ECB81' : '#F0B90B'
+                        )
+                      }}>
+                        {balanceLoading ? (
+                          <span className="flex items-center gap-2">
+                            <RefreshCw className="h-4 w-4 animate-spin" />
+                            {language === 'zh' ? '查询中...' : 'Loading...'}
+                          </span>
+                        ) : hyperliquidBalance === null ? (
+                          language === 'zh' ? '查询失败' : 'Failed to load'
+                        ) : (
+                          `${hyperliquidBalance.toFixed(2)} USDC`
+                        )}
+                      </div>
+                    </div>
+
+                    <p className="text-sm mb-2" style={{ color: '#848E9C' }}>
+                      {language === 'zh'
+                        ? hyperliquidBalance && hyperliquidBalance > 0
+                          ? '✅ 余额充足，可以开始授权。'
+                          : '⚠️ 在授权前，您必须先在 Hyperliquid 上存入资金（建议至少 1 USDC）。'
+                        : hyperliquidBalance && hyperliquidBalance > 0
+                          ? '✅ Balance sufficient, you can proceed with authorization.'
+                          : '⚠️ Before authorizing, you must deposit funds on Hyperliquid (recommend at least 1 USDC).'}
+                    </p>
+                    <a
+                      href={agentWallet.hyperliquid_chain === 'Testnet'
+                        ? 'https://app.hyperliquid-testnet.xyz/trade'
+                        : 'https://app.hyperliquid.xyz/trade'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm mt-2 inline-flex items-center gap-1 hover:underline"
+                      style={{ color: '#60a5fa' }}
+                    >
+                      {language === 'zh' ? '前往 Hyperliquid 存款' : 'Go to Hyperliquid Deposit'} →
+                    </a>
+                  </div>
+
                   {/* 授权说明 */}
                   <div
                     className="rounded-lg p-4 mb-4"
-                    style={{ background: '#0B0E11', border: '1px solid #2B3139' }}
+                    style={{
+                      background: '#0B0E11',
+                      border: '1px solid #2B3139',
+                    }}
                   >
                     <p className="text-sm mb-2" style={{ color: '#EAECEF' }}>
-                      <strong>{language === 'zh' ? '授权包含 2 个步骤：' : 'Authorization includes 2 steps:'}</strong>
+                      <strong>
+                        {language === 'zh'
+                          ? '授权包含 2 个步骤：'
+                          : 'Authorization includes 2 steps:'}
+                      </strong>
                     </p>
-                    <ul className="text-sm space-y-1" style={{ color: '#848E9C' }}>
+                    <ul
+                      className="text-sm space-y-1"
+                      style={{ color: '#848E9C' }}
+                    >
                       <li>
-                        1️⃣ {language === 'zh' ? 'Agent 钱包授权 - 允许 AI 代理交易' : 'Agent Wallet Authorization - Enable AI trading'}
+                        1️⃣{' '}
+                        {language === 'zh'
+                          ? 'Agent 钱包授权 - 允许 AI 代理交易'
+                          : 'Agent Wallet Authorization - Enable AI trading'}
                       </li>
                       <li>
-                        2️⃣ {language === 'zh' ? '平台费率授权 (0.1%) - 确保平台稳定运营' : 'Platform Fee (0.1%) - Ensure platform stability'}
+                        2️⃣{' '}
+                        {language === 'zh'
+                          ? '平台费率授权 (0.1%) - 确保平台稳定运营'
+                          : 'Platform Fee (0.1%) - Ensure platform stability'}
                       </li>
                     </ul>
                   </div>
@@ -328,7 +656,9 @@ export function AgentWalletBackendPage() {
                     ) : (
                       <>
                         <Key className="h-4 w-4" />
-                        {language === 'zh' ? '立即授权（2次签名）' : 'Authorize Now (2 Signatures)'}
+                        {language === 'zh'
+                          ? '立即授权（2次签名）'
+                          : 'Authorize Now (2 Signatures)'}
                       </>
                     )}
                   </button>
@@ -343,8 +673,13 @@ export function AgentWalletBackendPage() {
           >
             <div className="flex items-center gap-3 mb-4">
               <AlertCircle className="h-5 w-5" style={{ color: '#F0B90B' }} />
-              <h2 className="text-lg font-semibold" style={{ color: '#EAECEF' }}>
-                {language === 'zh' ? '尚未创建 Agent 钱包' : 'No Agent Wallet Yet'}
+              <h2
+                className="text-lg font-semibold"
+                style={{ color: '#EAECEF' }}
+              >
+                {language === 'zh'
+                  ? '尚未创建 Agent 钱包'
+                  : 'No Agent Wallet Yet'}
               </h2>
             </div>
 
@@ -354,29 +689,50 @@ export function AgentWalletBackendPage() {
                 : 'Click the button below to create an Agent wallet. The private key will be generated and encrypted by the backend, no manual key management needed.'}
             </p>
 
-            <button
-              onClick={handleCreateAgent}
-              disabled={!isConnected || loading}
-              className="flex items-center gap-2 px-6 py-3 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{
-                background: loading
-                  ? 'linear-gradient(135deg, #6B7280 0%, #4B5563 100%)'
-                  : 'linear-gradient(135deg, #F0B90B 0%, #d9a309 100%)',
-                color: '#000000',
-              }}
-            >
-              {loading ? (
-                <>
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                  {language === 'zh' ? '创建中...' : 'Creating...'}
-                </>
-              ) : (
-                <>
-                  <ArrowRight className="h-4 w-4" />
-                  {language === 'zh' ? '创建 Agent 钱包' : 'Create Agent Wallet'}
-                </>
-              )}
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={handleCreateAgent}
+                disabled={!isConnected || loading}
+                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  background: loading
+                    ? 'linear-gradient(135deg, #6B7280 0%, #4B5563 100%)'
+                    : 'linear-gradient(135deg, #F0B90B 0%, #d9a309 100%)',
+                  color: '#000000',
+                }}
+              >
+                {loading ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    {language === 'zh' ? '创建中...' : 'Creating...'}
+                  </>
+                ) : (
+                  <>
+                    <ArrowRight className="h-4 w-4" />
+                    {language === 'zh'
+                      ? '创建 Agent 钱包'
+                      : 'Create Agent Wallet'}
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={() => {
+                  console.log('🔄 Manual refresh triggered by user')
+                  loadAgentWallet()
+                }}
+                disabled={!isConnected || loading}
+                className="flex items-center gap-2 px-4 py-3 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  background: '#0a0a0a',
+                  border: '1px solid #2b3139',
+                  color: '#EAECEF',
+                }}
+                title={language === 'zh' ? '刷新状态' : 'Refresh Status'}
+              >
+                <RefreshCw className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         )}
 
@@ -384,9 +740,15 @@ export function AgentWalletBackendPage() {
         {error && (
           <div
             className="rounded-xl p-4 mb-6"
-            style={{ background: 'rgba(246, 70, 93, 0.1)', border: '1px solid rgba(246, 70, 93, 0.2)' }}
+            style={{
+              background: 'rgba(246, 70, 93, 0.1)',
+              border: '1px solid rgba(246, 70, 93, 0.2)',
+            }}
           >
-            <div className="flex items-center gap-2" style={{ color: '#F6465D' }}>
+            <div
+              className="flex items-center gap-2"
+              style={{ color: '#F6465D' }}
+            >
               <AlertCircle className="h-4 w-4" />
               <span className="text-sm">{error}</span>
             </div>
@@ -396,9 +758,15 @@ export function AgentWalletBackendPage() {
         {authStatus && (
           <div
             className="rounded-xl p-4 mb-6"
-            style={{ background: 'rgba(14, 203, 129, 0.1)', border: '1px solid rgba(14, 203, 129, 0.2)' }}
+            style={{
+              background: 'rgba(14, 203, 129, 0.1)',
+              border: '1px solid rgba(14, 203, 129, 0.2)',
+            }}
           >
-            <div className="flex items-center gap-2" style={{ color: '#0ECB81' }}>
+            <div
+              className="flex items-center gap-2"
+              style={{ color: '#0ECB81' }}
+            >
               <Check className="h-4 w-4" />
               <span className="text-sm whitespace-pre-line">{authStatus}</span>
             </div>
@@ -421,7 +789,9 @@ export function AgentWalletBackendPage() {
           <div className="mt-4 space-y-3 text-sm" style={{ color: '#848E9C' }}>
             <p>
               <strong style={{ color: '#EAECEF' }}>
-                {language === 'zh' ? '后端生成流程：' : 'Backend Generation Process:'}
+                {language === 'zh'
+                  ? '后端生成流程：'
+                  : 'Backend Generation Process:'}
               </strong>
             </p>
             <ol className="list-decimal list-inside space-y-2 ml-4">
@@ -453,15 +823,25 @@ export function AgentWalletBackendPage() {
               </strong>
             </p>
             <ul className="list-disc list-inside space-y-1 ml-4">
-              <li>{language === 'zh' ? '用户无需保存私钥' : 'No private key management needed'}</li>
               <li>
-                {language === 'zh' ? '私钥不暴露在前端' : 'Private key never exposed to frontend'}
+                {language === 'zh'
+                  ? '用户无需保存私钥'
+                  : 'No private key management needed'}
               </li>
               <li>
-                {language === 'zh' ? '适合托管服务场景' : 'Suitable for custodial service scenarios'}
+                {language === 'zh'
+                  ? '私钥不暴露在前端'
+                  : 'Private key never exposed to frontend'}
               </li>
               <li>
-                {language === 'zh' ? '降低用户使用门槛' : 'Lower barrier for users'}
+                {language === 'zh'
+                  ? '适合托管服务场景'
+                  : 'Suitable for custodial service scenarios'}
+              </li>
+              <li>
+                {language === 'zh'
+                  ? '降低用户使用门槛'
+                  : 'Lower barrier for users'}
               </li>
             </ul>
           </div>

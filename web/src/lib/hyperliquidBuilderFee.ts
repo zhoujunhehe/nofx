@@ -7,12 +7,13 @@
 
 import { type WalletClient } from 'viem'
 
-// EIP-712 Domain for Hyperliquid (matches official documentation)
+// EIP-712 Domain for Hyperliquid (matches official Python SDK)
 const HYPERLIQUID_DOMAIN = {
   name: 'HyperliquidSignTransaction',
   version: '1',
-  chainId: 421614, // Hyperliquid L1 (0x66eee) - used for user-signed actions
-  verifyingContract: '0x0000000000000000000000000000000000000000' as `0x${string}`,
+  chainId: 421614, // Hyperliquid L1 (0x66eee) - matches Python SDK user_signed_payload
+  verifyingContract:
+    '0x0000000000000000000000000000000000000000' as `0x${string}`,
 }
 
 // EIP-712 Types for ApproveBuilderFee (matches Python SDK - order matters!)
@@ -34,7 +35,11 @@ interface ApproveBuilderFeeParams {
 /**
  * Convert hex signature to {r, s, v} format (Hyperliquid API expects this format)
  */
-function signatureToRSV(signature: string): { r: string; s: string; v: number } {
+function signatureToRSV(signature: string): {
+  r: string
+  s: string
+  v: number
+} {
   // Remove 0x prefix if present
   const sig = signature.startsWith('0x') ? signature.slice(2) : signature
 
@@ -58,7 +63,11 @@ async function signApproveBuilderFee(
     throw new Error('Wallet not connected')
   }
 
-  const { builderAddress, maxFeeRate = 10, hyperliquidChain = 'Mainnet' } = params
+  const {
+    builderAddress,
+    maxFeeRate = 10,
+    hyperliquidChain = 'Mainnet',
+  } = params
 
   const nonce = Date.now()
 
@@ -103,7 +112,11 @@ export async function approveHyperliquidBuilderFee(
   params: ApproveBuilderFeeParams
 ): Promise<{ success: boolean; message: string }> {
   try {
-    const { builderAddress, maxFeeRate = 10, hyperliquidChain = 'Mainnet' } = params
+    const {
+      builderAddress,
+      maxFeeRate = 10,
+      hyperliquidChain = 'Mainnet',
+    } = params
 
     if (!walletClient.account) {
       throw new Error('钱包未连接')
@@ -119,7 +132,10 @@ export async function approveHyperliquidBuilderFee(
     }
 
     // Step 1: Generate signature (returns both signature and nonce to ensure they match)
-    const { signature, nonce } = await signApproveBuilderFee(walletClient, params)
+    const { signature, nonce } = await signApproveBuilderFee(
+      walletClient,
+      params
+    )
 
     // Convert maxFeeRate to percentage format for action payload
     const maxFeeRatePercentage = (maxFeeRate / 1000).toString() + '%'
@@ -142,7 +158,7 @@ export async function approveHyperliquidBuilderFee(
 
     const requestBody = {
       action,
-      nonce,  // Outer nonce (same as action.nonce, required by API)
+      nonce, // Outer nonce (same as action.nonce, required by API)
       signature,
     }
 
@@ -162,9 +178,11 @@ export async function approveHyperliquidBuilderFee(
         status: response.status,
         statusText: response.statusText,
         errorData,
-        requestBody: { action, signature }  // Only log what we actually sent
+        requestBody: { action, signature }, // Only log what we actually sent
       })
-      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`)
+      throw new Error(
+        errorData.error || `HTTP ${response.status}: ${response.statusText}`
+      )
     }
 
     const result = await response.json()
@@ -183,8 +201,8 @@ export async function approveHyperliquidBuilderFee(
       if (result.response && result.response.includes('Must deposit')) {
         throw new Error(
           `Builder 地址需要在 Hyperliquid 存款才能接收手续费。\n` +
-          `提示：Builder Fee 是可选的，不影响 Agent 交易功能。\n` +
-          `如不需要 Builder Fee，可跳过此步骤。`
+            `提示：Builder Fee 是可选的，不影响 Agent 交易功能。\n` +
+            `如不需要 Builder Fee，可跳过此步骤。`
         )
       }
       console.error('❌ Unexpected response format:', result)
@@ -278,7 +296,10 @@ export async function queryHyperliquidBalance(
     return { balance: 0 }
   } catch (error) {
     console.error('Query Hyperliquid balance failed:', error)
-    return { balance: 0, error: error instanceof Error ? error.message : 'Unknown error' }
+    return {
+      balance: 0,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    }
   }
 }
 

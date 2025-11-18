@@ -12,6 +12,10 @@ ARG NGINX_VERSION=alpine
 # Build Stage (Node)
 # ──────────────────────────────────────────────────────────────
 FROM node:${NODE_VERSION} AS builder
+
+# 安裝構建依賴（Python 和編譯工具，用於 native 模組如 bufferutil）
+RUN apk add --no-cache python3 make g++
+
 WORKDIR /build
 
 COPY web/package*.json ./

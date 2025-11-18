@@ -293,7 +293,8 @@ func (tm *TraderManager) addTraderFromDB(traderCfg *config.TraderRecord, aiModel
 		traderConfig.BinanceAPIKey = exchangeCfg.APIKey
 		traderConfig.BinanceSecretKey = exchangeCfg.SecretKey
 	} else if exchangeCfg.ID == "hyperliquid" {
-		traderConfig.HyperliquidPrivateKey = exchangeCfg.APIKey // hyperliquid用APIKey存储private key
+		// Hyperliquid 私钥（可能是 BACKEND_AGENT: 前缀，将在创建 trader 时解密）
+		traderConfig.HyperliquidPrivateKey = exchangeCfg.APIKey
 		traderConfig.HyperliquidWalletAddr = exchangeCfg.HyperliquidWalletAddr
 	} else if exchangeCfg.ID == "aster" {
 		traderConfig.AsterUser = exchangeCfg.AsterUser
@@ -399,7 +400,8 @@ func (tm *TraderManager) AddTraderFromDB(traderCfg *config.TraderRecord, aiModel
 		traderConfig.BinanceAPIKey = exchangeCfg.APIKey
 		traderConfig.BinanceSecretKey = exchangeCfg.SecretKey
 	} else if exchangeCfg.ID == "hyperliquid" {
-		traderConfig.HyperliquidPrivateKey = exchangeCfg.APIKey // hyperliquid用APIKey存储private key
+		// Hyperliquid 私钥（可能是 BACKEND_AGENT: 前缀，将在创建 trader 时解密）
+		traderConfig.HyperliquidPrivateKey = exchangeCfg.APIKey
 		traderConfig.HyperliquidWalletAddr = exchangeCfg.HyperliquidWalletAddr
 	} else if exchangeCfg.ID == "aster" {
 		traderConfig.AsterUser = exchangeCfg.AsterUser
@@ -1163,7 +1165,8 @@ func (tm *TraderManager) loadSingleTrader(traderCfg *config.TraderRecord, aiMode
 		traderConfig.BinanceAPIKey = exchangeCfg.APIKey
 		traderConfig.BinanceSecretKey = exchangeCfg.SecretKey
 	} else if exchangeCfg.ID == "hyperliquid" {
-		traderConfig.HyperliquidPrivateKey = exchangeCfg.APIKey // hyperliquid用APIKey存储private key
+		// Hyperliquid 私钥（可能是 BACKEND_AGENT: 前缀，将在创建 trader 时解密）
+		traderConfig.HyperliquidPrivateKey = exchangeCfg.APIKey
 		traderConfig.HyperliquidWalletAddr = exchangeCfg.HyperliquidWalletAddr
 	} else if exchangeCfg.ID == "aster" {
 		traderConfig.AsterUser = exchangeCfg.AsterUser
