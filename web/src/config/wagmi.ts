@@ -15,7 +15,9 @@ import { mainnet, arbitrum, arbitrumSepolia, base, optimism, polygon } from 'wag
 // WalletConnect 项目 ID - 需要从 https://cloud.walletconnect.com/ 获取
 // 使用一个临时的默认 ID，但强烈建议替换为自己的项目 ID
 // 如果没有有效 ID，RainbowKit 会回退到仅支持注入式钱包（如 MetaMask）
-const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || 'a01e2f3b4c5d6e7f8a9b0c1d2e3f4a5b'
+const projectId =
+  import.meta.env.VITE_WALLETCONNECT_PROJECT_ID ||
+  'adb9696ee8fbfbf7f434696cf1717699'
 
 // 自定义钱包列表
 const connectors = connectorsForWallets(
