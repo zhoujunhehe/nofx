@@ -57,7 +57,7 @@ Welcome to the NOFX documentation! This page helps you find the right documentat
 
 **Get Involved:**
 - 💬 [Telegram Community](https://t.me/nofx_dev_community)
-- 🐦 [Twitter @nofx_ai](https://x.com/nofx_ai)
+- 🐦 [Twitter @nofx_ai](https://x.com/nofx_official)
 - 🐛 [Report Issues](https://github.com/tinkle-community/nofx/issues)
 
 ---
@@ -164,7 +164,7 @@ Welcome to the NOFX documentation! This page helps you find the right documentat
 
 1. **Search GitHub Issues** - Someone might have asked already
 2. **Join Telegram** - [NOFX Developer Community](https://t.me/nofx_dev_community)
-3. **Ask on Twitter** - Mention [@nofx_ai](https://x.com/nofx_ai)
+3. **Ask on Twitter** - Mention [@nofx_ai](https://x.com/nofx_official)
 4. **Create an Issue** - [New Issue](https://github.com/tinkle-community/nofx/issues/new)
 
 ---
