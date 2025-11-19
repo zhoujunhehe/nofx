@@ -198,8 +198,8 @@ export function AgentWalletBackendPage() {
 
       console.log('✅ Step 1/2: Agent Wallet authorized')
 
-      // ===== 步骤 2: 授权 Builder Fee (0.1%) =====
-      console.log('Step 2/2: Authorizing Platform Fee (0.1%)...')
+      // ===== 步骤 2: 授权 Builder =====
+      console.log('Step 2/2: Authorizing Builder...')
 
       const builderFeeResult = await approveHyperliquidBuilderFee(
         walletClient,
@@ -529,8 +529,8 @@ export function AgentWalletBackendPage() {
                       <li>
                         2️⃣{' '}
                         {language === 'zh'
-                          ? '平台费率授权 (0.1%) - 确保平台稳定运营'
-                          : 'Platform Fee (0.1%) - Ensure platform stability'}
+                          ? 'Builder 授权 - 完成 Hyperliquid 配置'
+                          : 'Builder Authorization - Complete Hyperliquid setup'}
                       </li>
                     </ul>
                   </div>

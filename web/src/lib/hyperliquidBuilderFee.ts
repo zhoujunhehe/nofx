@@ -199,11 +199,7 @@ export async function approveHyperliquidBuilderFee(
     } else if (result.status === 'err') {
       // Handle specific error cases
       if (result.response && result.response.includes('Must deposit')) {
-        throw new Error(
-          `Builder 地址需要在 Hyperliquid 存款才能接收手续费。\n` +
-            `提示：Builder Fee 是可选的，不影响 Agent 交易功能。\n` +
-            `如不需要 Builder Fee，可跳过此步骤。`
-        )
+        throw new Error('Builder 授权失败')
       }
       console.error('❌ Unexpected response format:', result)
       throw new Error(result.response || result.error || '授权失败，请稍后重试')
