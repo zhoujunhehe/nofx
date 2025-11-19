@@ -1,371 +1,236 @@
-# NOFX Examples - 數據查看工具
+# NOFX Examples - Builder Fee 統計工具
 
-這個目錄包含獨立的 Go 腳本，用於查看 NOFX 數據庫中的數據。
+這個目錄包含獨立的 Go 腳本，用於統計 NOFX Builder Fee 使用情況。
 
-## 📦 工具列表
+## 🎯 設計理念
 
-### 1. `view_agent_wallets.go` - 命令行查看器
+**✅ 完全基於 Hyperliquid 鏈上 CSV 數據，不依賴本地數據庫**
 
-查看所有 Agent Wallet 和 Builder Fee 授權狀態的命令行工具。
+- 直接解析 Hyperliquid Builder Fills CSV
+- 統計真實交易數據和費用
+- 避免數據庫同步問題
+
+---
+
+## 📦 工具
+
+### `analyze_builder_stats.go` - Builder Fee 統計分析工具
+
+掃描 Hyperliquid Builder Fills CSV 數據，統計所有使用 NOFX Builder Fee 的用戶。
 
 **功能**：
-- ✅ 顯示統計信息（總數、已激活、Builder Fee 授權數量）
-- ✅ 列表展示所有 Agent Wallets
-- ✅ 詳細信息（當記錄少於 5 條時）
-- ✅ 美化的表格輸出
+- ✅ 完全基於鏈上 CSV 數據
+- ✅ 不依賴本地數據庫
+- ✅ 統計總交易數、總費用、用戶數量
+- ✅ 按用戶分組詳細統計交易次數和費用
+- ✅ 顯示每個用戶的交易幣種和時間範圍
 
 **使用方法**：
 
 ```bash
-# 方式 1：直接運行（使用默認數據庫配置）
 cd examples
-go run view_agent_wallets.go
 
-# 方式 2：自定義數據庫連接
-DATABASE_URL="postgres://user:pass@host:5432/dbname?sslmode=disable" \
-  go run view_agent_wallets.go
+# 默認掃描最近 30 天
+go run analyze_builder_stats.go
 
-# 方式 3：編譯後運行
-go build -o view-wallets view_agent_wallets.go
-./view-wallets
+# 自定義掃描天數（例如 60 天）
+go run analyze_builder_stats.go 60
+
+# 掃描最近 7 天
+go run analyze_builder_stats.go 7
 ```
 
 **輸出示例**：
 
 ```
-✅ 數據庫連接成功
-
-📊 Agent Wallet 統計
+🔍 NOFX Builder Fee 統計分析
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-總數量:              3
-已激活 (ACTIVE):     2
-Builder Fee 已授權:  1
+Builder 地址: 0x891dc6f05ad47a3c1a05da55e7a7517971faaf0d
+掃描範圍: 最近 30 天
 
-📋 Agent Wallet 詳細列表
+📅 2025-11-14: 1 笔交易
+
+📊 總覽統計
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ID | Main Wallet      | Agent Address    | Status        | Chain   | Builder Fee | Fee Rate | Created
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1  | 0x11960d12...8dc | 0x880debdb...448 | ✅ ACTIVE     | Mainnet | ✅ Yes      | 0.10%    | 2025-11-18 12:01
-2  | 0x22334455...abc | 0x99aabbcc...def | ✅ ACTIVE     | Mainnet | ❌ No       | -        | 2025-11-17 10:30
-3  | 0x33445566...xyz | 0xaabbccdd...123 | ⚠️ INIT      | Testnet | ❌ No       | -        | 2025-11-16 09:15
+有數據天數:      1 天
+總交易筆數:      1 笔
+總 Builder Fee:  0.000148 USDC
+授權用戶數量:    1 人
+
+📋 用戶詳情 (按交易次數排序)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+用戶地址                                         | 交易數 | 總費用 (USDC) | 首次交易    | 最後交易    | 交易幣種
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+0x11960d12...3e58dc                          | 1      |      0.000148 | 2025-11-14 | 2025-11-14 | BTC
+
+✅ 分析完成！
 ```
 
 ---
 
-### 2. `web_viewer.go` - Web 界面查看器
+## 📊 CSV 數據說明
 
-帶 Web 界面的實時數據查看器，包含自動刷新功能。
-
-**功能**：
-- ✅ 精美的 Web 界面（NOFX 品牌風格）
-- ✅ 實時統計卡片（總數、已激活、Builder Fee、待處理）
-- ✅ 響應式表格展示
-- ✅ 自動刷新（每 30 秒）
-- ✅ RESTful API 端點
-
-**使用方法**：
-
-```bash
-# 方式 1：直接運行（默認端口 8888）
-cd examples
-go run web_viewer.go
-
-# 方式 2：自定義端口
-PORT=9000 go run web_viewer.go
-
-# 方式 3：自定義數據庫和端口
-DATABASE_URL="postgres://user:pass@host:5432/dbname?sslmode=disable" \
-  PORT=9000 \
-  go run web_viewer.go
-
-# 方式 4：編譯後運行
-go build -o web-viewer web_viewer.go
-./web-viewer
+**數據來源**：
+```
+https://stats-data.hyperliquid.xyz/Mainnet/builder_fills/{builder_address}/{YYYYMMDD}.csv.lz4
 ```
 
-**訪問界面**：
+**CSV 字段**：
 
-```
-🌐 打開瀏覽器訪問: http://localhost:8888
-```
+| 字段 | 說明 |
+|------|------|
+| `time` | 交易時間 (ISO 8601) |
+| `user` | 用戶錢包地址 |
+| `coin` | 交易幣種 (BTC, ETH, etc.) |
+| `side` | 方向 (Bid/Ask) |
+| `px` | 成交價格 |
+| `sz` | 成交數量 |
+| `builder_fee` | Builder 費用 (USDC) |
 
-**API 端點**：
-
-```bash
-# 獲取所有 Agent Wallets
-curl http://localhost:8888/api/wallets | jq
-
-# 獲取統計信息
-curl http://localhost:8888/api/stats | jq
-```
-
-**API 響應示例**：
-
-```json
-// GET /api/wallets
-[
-  {
-    "id": 1,
-    "main_wallet": "0x11960d12811a406dd18a4fc3896b9821113e58dc",
-    "agent_address": "0x880debdb0fd8bfced602cc7408e412875d67e448",
-    "status": "ACTIVE",
-    "hyperliquid_chain": "Mainnet",
-    "builder_fee_authorized": true,
-    "builder_fee_max_rate": 100,
-    "builder_fee_authorized_at": "2025-11-18T12:15:30Z",
-    "created_at": "2025-11-18T12:01:45Z",
-    "updated_at": "2025-11-18T12:15:30Z"
-  }
-]
-
-// GET /api/stats
-{
-  "total_count": 3,
-  "active_count": 2,
-  "builder_fee_count": 1,
-  "pending_count": 1
-}
+**CSV 示例**：
+```csv
+time,user,coin,side,px,sz,crossed,special_trade_type,tif,is_trigger,counterparty,closed_pnl,twap_id,builder_fee
+2025-11-14T04:19:17Z,0x11960d12811a406dd18a4fc3896b9821113e58dc,BTC,Bid,98948,0.00015,true,Na,Ioc,false,0x3ac9b030594c1ef23a3e8fed9f62356b7bf98bf6,0,0,0.000148
 ```
 
 ---
 
-## 🔧 環境變量配置
+## ⚠️ 重要限制
 
-### 數據庫連接
+### 數據範圍
+- ✅ **可以統計**：已經產生交易並支付 Builder Fee 的用戶
+- ❌ **無法統計**：已授權但未交易的用戶
+- ❌ **無法統計**：授權狀態（需要查詢 Hyperliquid API）
 
-```bash
-# PostgreSQL 連接字符串
-DATABASE_URL="postgres://username:password@hostname:port/database?sslmode=disable"
+### 數據延遲
+- ⏰ **約 1-2 天**（建議測試大型 Builder 驗證實際延遲）
+- 例如：11/14 交易 → 11/15 或 11/16 CSV 可能才能訪問
 
-# 示例：
-# 本地開發
-DATABASE_URL="postgres://nofx:nofx@localhost:5432/nofx?sslmode=disable"
-
-# Docker 容器
-DATABASE_URL="postgres://nofx:nofx@nofx-postgres:5432/nofx?sslmode=disable"
-
-# 生產環境
-DATABASE_URL="postgres://user:pass@db.example.com:5432/nofx?sslmode=require"
-```
-
-### Web Viewer 端口
-
-```bash
-# 自定義端口（默認 8888）
-PORT=9000
-```
+### 統計限制
+- 只能看到**已交易並收費**的用戶
+- 如果用戶授權了但一直沒交易，CSV 中不會有記錄
+- 如果 Builder Fee 為 0，也不會出現在 CSV 中
 
 ---
 
-## 📊 數據字段說明
+## 🔧 安裝依賴
 
-### Agent Wallet 字段
-
-| 字段 | 類型 | 說明 |
-|------|------|------|
-| `id` | int | 自增 ID |
-| `main_wallet` | string | 主錢包地址（用戶的錢包） |
-| `agent_address` | string | Agent 錢包地址（後端生成） |
-| `status` | string | 狀態：`INIT`（初始）或 `ACTIVE`（已激活） |
-| `hyperliquid_chain` | string | Hyperliquid 鏈：`Mainnet` 或 `Testnet` |
-| `builder_fee_authorized` | bool | Builder Fee 是否已授權 |
-| `builder_fee_max_rate` | int | Builder Fee 費率（tenths of bp，100 = 0.1%） |
-| `builder_fee_authorized_at` | timestamp | Builder Fee 授權時間 |
-| `created_at` | timestamp | 創建時間 |
-| `updated_at` | timestamp | 更新時間 |
-
-### Builder Fee Rate 計算
-
-```
-builder_fee_max_rate = 100 (tenths of basis points)
-→ 10 basis points
-→ 0.1%
-
-計算公式：
-percentage = builder_fee_max_rate / 1000
-```
-
-**示例**：
-- `builder_fee_max_rate = 10` → 0.01%
-- `builder_fee_max_rate = 100` → 0.1% ← 推薦值
-- `builder_fee_max_rate = 1000` → 1.0%（最大值）
-
----
-
-## 🐳 Docker 環境中使用
-
-如果數據庫運行在 Docker 容器中：
+工具需要 `lz4` 解壓 CSV 文件：
 
 ```bash
-# 方式 1：從宿主機連接（使用 localhost）
-DATABASE_URL="postgres://nofx:nofx@localhost:5432/nofx?sslmode=disable" \
-  go run view_agent_wallets.go
+# macOS
+brew install lz4
 
-# 方式 2：在 Docker 網絡中運行腳本
-# 首先進入 nofx-trading 容器
-docker exec -it nofx-trading sh
+# Ubuntu/Debian
+sudo apt-get install lz4
 
-# 然後在容器內運行
-DATABASE_URL="postgres://nofx:nofx@nofx-postgres:5432/nofx?sslmode=disable" \
-  go run /path/to/view_agent_wallets.go
-```
-
----
-
-## 🔍 故障排查
-
-### 問題 1：無法連接數據庫
-
-```
-❌ 無法連接數據庫: dial tcp [::1]:5432: connect: connection refused
-```
-
-**解決方案**：
-1. 檢查數據庫是否運行：
-   ```bash
-   docker ps | grep postgres
-   ```
-
-2. 檢查端口映射：
-   ```bash
-   docker-compose ps
-   ```
-
-3. 使用正確的主機名：
-   - 宿主機 → Docker：`localhost:5432`
-   - Docker → Docker：`nofx-postgres:5432`
-
-### 問題 2：權限錯誤
-
-```
-❌ 數據庫連接失敗: pq: password authentication failed
-```
-
-**解決方案**：
-檢查 `config/config.json` 中的數據庫配置：
-
-```json
-{
-  "database": {
-    "host": "localhost",
-    "port": 5432,
-    "user": "nofx",
-    "password": "nofx",
-    "dbname": "nofx"
-  }
-}
-```
-
-### 問題 3：找不到表
-
-```
-❌ 查詢失敗: pq: relation "agent_wallets" does not exist
-```
-
-**解決方案**：
-運行數據庫遷移：
-
-```bash
-# 初始化數據庫
-./scripts/init-db.sh
-
-# 或者手動創建表
-docker exec -it nofx-postgres psql -U nofx -d nofx -f /path/to/schema.sql
-```
-
----
-
-## 📝 開發建議
-
-### 添加新的查看器
-
-如果你想創建新的數據查看工具，可以參考現有的腳本結構：
-
-```go
-package main
-
-import (
-    "database/sql"
-    "fmt"
-    "log"
-    "os"
-
-    _ "github.com/lib/pq"
-)
-
-func main() {
-    // 1. 連接數據庫
-    dbURL := os.Getenv("DATABASE_URL")
-    if dbURL == "" {
-        dbURL = "postgres://nofx:nofx@localhost:5432/nofx?sslmode=disable"
-    }
-
-    db, err := sql.Open("postgres", dbURL)
-    if err != nil {
-        log.Fatalf("❌ 無法連接數據庫: %v", err)
-    }
-    defer db.Close()
-
-    // 2. 查詢數據
-    query := "SELECT ... FROM your_table"
-    rows, err := db.Query(query)
-    if err != nil {
-        log.Fatalf("❌ 查詢失敗: %v", err)
-    }
-    defer rows.Close()
-
-    // 3. 處理數據
-    for rows.Next() {
-        // ...
-    }
-
-    // 4. 顯示結果
-    fmt.Println("結果...")
-}
+# CentOS/RHEL
+sudo yum install lz4
 ```
 
 ---
 
 ## 🎯 使用場景
 
-### 場景 1：監控 Builder Fee 授權進度
-
+### 1. 查看 Builder 收益統計
 ```bash
-# 定期運行查看器
-watch -n 10 'go run view_agent_wallets.go'
+go run analyze_builder_stats.go 90
+```
+掃描最近 90 天，統計總收益。
 
-# 或使用 Web 界面（自動刷新）
-go run web_viewer.go
+### 2. 分析用戶交易行為
+查看輸出的用戶詳情表格，了解：
+- 哪些用戶交易最頻繁
+- 用戶偏好哪些幣種
+- 用戶的活躍時間段
+
+### 3. 定期監控
+```bash
+# 每天運行一次，保存結果
+go run analyze_builder_stats.go 30 > daily_stats_$(date +%Y%m%d).txt
 ```
 
-### 場景 2：調試授權問題
+---
+
+## 🐳 Docker 環境中使用
+
+如果使用 Docker 環境，可以進入容器運行工具：
 
 ```bash
-# 查看特定用戶的 Agent Wallet 狀態
-go run view_agent_wallets.go | grep "0x11960d12"
+# 進入交易容器
+docker exec -it nofx-trading sh
 
-# 查看所有未授權 Builder Fee 的錢包
-curl http://localhost:8888/api/wallets | \
-  jq '.[] | select(.builder_fee_authorized == false)'
+# 運行工具
+cd /app/examples
+go run analyze_builder_stats.go [days]
 ```
 
-### 場景 3：生成報告
+---
 
+## 🔍 故障排查
+
+### 問題 1: 沒有數據
+
+**可能原因**：
+1. 掃描時間範圍內沒有交易
+2. CSV 數據尚未發布（有延遲，具體天數待驗證）
+3. 該 Builder 交易量較少
+
+**解決方案**：
+- 擴大掃描天數：`go run analyze_builder_stats.go 90`
+- 等待數據發布（建議 1-2 天後重試）
+- 測試大型 Builder 驗證數據可用性
+
+### 問題 2: CSV 解壓失敗
+
+**錯誤信息**：
+```
+⚠️  解壓失敗 20251114: ...
+```
+
+**解決方案**：
 ```bash
-# 導出為 JSON
-curl http://localhost:8888/api/wallets > agent_wallets_$(date +%Y%m%d).json
+# 檢查 lz4 是否安裝
+which lz4
 
-# 統計信息
-curl http://localhost:8888/api/stats | jq
+# 安裝 lz4
+brew install lz4  # macOS
+sudo apt-get install lz4  # Ubuntu/Debian
 ```
+
+### 問題 3: 網絡連接失敗
+
+**錯誤信息**：
+```
+⚠️  無法下載 CSV
+```
+
+**解決方案**：
+- 檢查網絡連接
+- 確認 Hyperliquid stats-data 服務是否正常
+- 測試手動訪問：
+  ```bash
+  curl -I "https://stats-data.hyperliquid.xyz/Mainnet/builder_fills/0x891dc6f05ad47a3c1a05da55e7a7517971faaf0d/20251114.csv.lz4"
+  ```
+
+---
+
+## 📝 NOFX Builder 信息
+
+| 項目 | 值 |
+|------|-----|
+| **Builder 地址** | `0x891dc6f05ad47a3c1a05da55e7a7517971faaf0d` |
+| **Builder Fee 費率** | 0.10% (100 tenths of bp) |
+| **推薦碼** | AITRADING |
+| **Referral API** | 18 位用戶（截至 2025-11-19）|
 
 ---
 
 ## 📚 參考資源
 
-- **PostgreSQL 文檔**: https://www.postgresql.org/docs/
-- **Go database/sql**: https://pkg.go.dev/database/sql
-- **lib/pq (PostgreSQL driver)**: https://github.com/lib/pq
+- **Hyperliquid Builder Codes**: https://hyperliquid.gitbook.io/hyperliquid-docs/trading/builder-codes
+- **Hyperliquid API**: https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api
+- **Builder Fills CSV**: https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/builder-fills
 
 ---
 
