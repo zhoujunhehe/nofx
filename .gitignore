@@ -33,6 +33,7 @@ config.json
 config.db*
 nofx.db
 configbak.json
+config.jsonbak
 
 # 生产配置
 nginx/
