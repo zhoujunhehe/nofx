@@ -976,8 +976,18 @@ func (s *Server) handleStartTrader(c *gin.Context) {
 
 	trader, err := s.traderManager.GetTrader(traderID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "交易员不存在"})
-		return
+		// 尝试从数据库重新加载交易员
+		if loadErr := s.traderManager.LoadTraderByID(s.database, userID, traderID); loadErr != nil {
+			log.Printf("⚠️ 加载交易员到内存失败: %v", loadErr)
+			c.JSON(http.StatusNotFound, gin.H{"error": "交易员不存在"})
+			return
+		}
+		// 重新获取
+		trader, err = s.traderManager.GetTrader(traderID)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "交易员加载失败"})
+			return
+		}
 	}
 
 	// 检查交易员是否已经在运行
