@@ -12,12 +12,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 )
 
 // PostgreSQLDatabase PostgreSQL数据库配置
 type PostgreSQLDatabase struct {
-	db            *sql.DB
+	db            *sqlx.DB
 	cryptoService *crypto.CryptoService
 }
 
@@ -36,7 +37,7 @@ func NewPostgreSQLDatabase() (*PostgreSQLDatabase, error) {
 
 	log.Printf("📋 连接PostgreSQL数据库: %s:%s/%s", host, port, dbname)
 
-	db, err := sql.Open("postgres", dsn)
+	db, err := sqlx.Open("postgres", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("打开PostgreSQL数据库失败: %w", err)
 	}

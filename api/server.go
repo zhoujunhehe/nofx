@@ -114,6 +114,7 @@ func (s *Server) setupRoutes() {
 		api.POST("/login", s.handleLogin)
 		api.POST("/verify-otp", s.handleVerifyOTP)
 		api.POST("/complete-registration", s.handleCompleteRegistration)
+		api.POST("/reset-password", s.handleResetPassword)
 
 		// 需要认证的路由
 		protected := api.Group("/", s.authMiddleware())
