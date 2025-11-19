@@ -3,7 +3,9 @@
  * 后端生成和托管 Agent 钱包
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+import { httpClient } from './httpClient'
+
+const API_BASE = '/api'
 
 // Helper function to get auth headers
 function getAuthHeaders(): Record<string, string> {
@@ -77,14 +79,14 @@ export async function createAgentWallet(
   mainWallet: string,
   hyperliquidChain: 'Mainnet' | 'Testnet' = 'Mainnet'
 ): Promise<CreateAgentWalletResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/agent/create`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify({
+  const response = await httpClient.post(
+    `${API_BASE}/agent/create`,
+    {
       main_wallet: mainWallet.toLowerCase(),
       hyperliquid_chain: hyperliquidChain,
-    } as CreateAgentWalletRequest),
-  })
+    } as CreateAgentWalletRequest,
+    getAuthHeaders()
+  )
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}))
@@ -100,12 +102,9 @@ export async function createAgentWallet(
 export async function getAgentWallet(
   mainWallet: string
 ): Promise<GetAgentWalletResponse> {
-  const response = await fetch(
-    `${API_BASE_URL}/api/agent/status?main_wallet=${mainWallet.toLowerCase()}`,
-    {
-      method: 'GET',
-      headers: getAuthHeaders(),
-    }
+  const response = await httpClient.get(
+    `${API_BASE}/agent/status?main_wallet=${mainWallet.toLowerCase()}`,
+    getAuthHeaders()
   )
 
   if (!response.ok) {
@@ -122,11 +121,11 @@ export async function getAgentWallet(
 export async function authorizeAgent(
   request: AuthorizeAgentRequest
 ): Promise<AuthorizeAgentResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/agent/authorize`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(request),
-  })
+  const response = await httpClient.post(
+    `${API_BASE}/agent/authorize`,
+    request,
+    getAuthHeaders()
+  )
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}))
@@ -153,16 +152,13 @@ export async function confirmBuilderFee(
   mainWallet: string,
   maxFeeRate: number
 ): Promise<ConfirmBuilderFeeResponse> {
-  const response = await fetch(
-    `${API_BASE_URL}/api/agent/confirm-builder-fee`,
+  const response = await httpClient.post(
+    `${API_BASE}/agent/confirm-builder-fee`,
     {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({
-        main_wallet: mainWallet.toLowerCase(),
-        max_fee_rate: maxFeeRate,
-      } as ConfirmBuilderFeeRequest),
-    }
+      main_wallet: mainWallet.toLowerCase(),
+      max_fee_rate: maxFeeRate,
+    } as ConfirmBuilderFeeRequest,
+    getAuthHeaders()
   )
 
   if (!response.ok) {

@@ -1,6 +1,8 @@
 import { RouterProvider } from 'react-router-dom'
 import { WagmiProvider } from 'wagmi'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { RainbowKitProvider, darkTheme } from '@rainbow-me/rainbowkit'
+import '@rainbow-me/rainbowkit/styles.css'
 import { LanguageProvider } from './contexts/LanguageContext'
 import { AuthProvider } from './contexts/AuthContext'
 import { ConfirmDialogProvider } from './components/ConfirmDialog'
@@ -49,13 +51,26 @@ export default function App() {
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
-        <LanguageProvider>
-          <AuthProvider>
-            <ConfirmDialogProvider>
-              <AppContent />
-            </ConfirmDialogProvider>
-          </AuthProvider>
-        </LanguageProvider>
+        <RainbowKitProvider
+          theme={darkTheme({
+            accentColor: '#F0B90B', // NOFX 品牌黄色
+            accentColorForeground: '#0B0E11', // 深色文字
+            borderRadius: 'medium',
+            overlayBlur: 'small',
+          })}
+          modalSize="compact"
+          appInfo={{
+            appName: 'NOFX',
+          }}
+        >
+          <LanguageProvider>
+            <AuthProvider>
+              <ConfirmDialogProvider>
+                <AppContent />
+              </ConfirmDialogProvider>
+            </AuthProvider>
+          </LanguageProvider>
+        </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
   )

@@ -2,10 +2,10 @@ import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Menu, X, ChevronDown } from 'lucide-react'
+import { ConnectButton } from '@rainbow-me/rainbowkit'
 import { t, type Language } from '../i18n/translations'
 import { Container } from './Container'
 import { useSystemConfig } from '../hooks/useSystemConfig'
-import { ConnectWallet } from './ConnectWallet'
 
 interface HeaderBarProps {
   onLoginClick?: () => void
@@ -485,7 +485,7 @@ export default function HeaderBar({
             )}
 
             {/* Connect Wallet Button - Only show when logged in */}
-            {isLoggedIn && <ConnectWallet />}
+            {isLoggedIn && <ConnectButton chainStatus="icon" showBalance={false} />}
 
             {/* Language Toggle - Always at the rightmost */}
             <div className="relative" ref={dropdownRef}>
@@ -803,7 +803,7 @@ export default function HeaderBar({
           {/* Connect Wallet - Mobile (only when logged in) */}
           {isLoggedIn && (
             <div className="py-2">
-              <ConnectWallet />
+              <ConnectButton chainStatus="icon" showBalance={false} />
             </div>
           )}
 
