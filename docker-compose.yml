@@ -44,6 +44,10 @@ services:
     build:
       context: .
       dockerfile: ./docker/Dockerfile.backend
+      args:
+        COMMIT_ID: ${COMMIT_ID:-unknown}
+        BRANCH: ${BRANCH:-unknown}
+        BUILD_DATE: ${BUILD_DATE:-unknown}
     container_name: nofx-trading
     restart: unless-stopped
     stop_grace_period: 30s  # 允许应用有 30 秒时间优雅关闭

@@ -105,7 +105,7 @@ func (s *TelegramSender) sendWithRetry(message string) {
 // send 发送单条消息
 func (s *TelegramSender) send(message string) error {
 	msg := tgbotapi.NewMessage(s.chatID, message)
-	msg.ParseMode = tgbotapi.ModeMarkdown
+	msg.ParseMode = tgbotapi.ModeHTML
 
 	_, err := s.bot.Send(msg)
 	return err

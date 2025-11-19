@@ -8,6 +8,7 @@ import (
 	"nofx/auth"
 	"nofx/config"
 	"nofx/crypto"
+	"nofx/logger"
 	"nofx/manager"
 	"nofx/market"
 	"nofx/market/kline"
@@ -19,6 +20,12 @@ import (
 	"strings"
 	"syscall"
 	"time"
+)
+
+var (
+	CommitID  = ""
+	Branch    = ""
+	DATE      = ""
 )
 
 // ConfigFile 配置文件结构，只包含需要同步到数据库的字段
@@ -149,9 +156,15 @@ func loadBetaCodesToDatabase(database config.DatabaseInterface) error {
 }
 
 func main() {
+
 	fmt.Println("╔════════════════════════════════════════════════════════════╗")
 	fmt.Println("║    🤖 AI多模型交易系统 - 支持 DeepSeek & Qwen            ║")
 	fmt.Println("╚════════════════════════════════════════════════════════════╝")
+	fmt.Println()
+	fmt.Printf("📦 版本信息:\n")
+	fmt.Printf("   • Commit:  %s\n", CommitID)
+	fmt.Printf("   • Branch:  %s\n", Branch)
+	fmt.Printf("   • Built:   %s\n", DATE)
 	fmt.Println()
 
 	// 读取配置文件
@@ -159,7 +172,13 @@ func main() {
 	if err != nil {
 		log.Fatalf("❌ 读取config.json失败: %v", err)
 	}
+	if err := logger.InitFromLogConfig(configFile.Log); err != nil {
+		log.Fatalf("❌ 初始化日志失败: %v", err)
+	}
 
+	// 记录版本到日志
+	Version := fmt.Sprintf("%s@%s (%s)", CommitID, Branch, DATE)
+	logger.Warnf("🚀 Server started - Version: %v", Version)
 	log.Printf("📋 初始化配置数据库 (PostgreSQL)")
 	database, err := config.NewDatabase()
 	if err != nil {

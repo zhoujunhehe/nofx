@@ -249,6 +249,21 @@ start() {
     #     build_frontend
     # fi
 
+    # Get build version information from git
+    COMMIT_ID=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+    BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+    BUILD_DATE=$(date +%Y%m%d-%H%M%S)
+
+    export COMMIT_ID
+    export BRANCH
+    export BUILD_DATE
+
+    print_info "构建版本信息:"
+    print_info "  • Commit: $COMMIT_ID"
+    print_info "  • Branch: $BRANCH"
+    print_info "  • Date: $BUILD_DATE"
+    echo ""
+
     # Rebuild images if flag set
     if [ "$1" == "--build" ]; then
         print_info "重新构建镜像..."

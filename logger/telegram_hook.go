@@ -2,7 +2,6 @@ package logger
 
 import (
 	"fmt"
-	"runtime"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -63,44 +62,26 @@ func (h *TelegramHook) Fire(entry *logrus.Entry) error {
 	return nil
 }
 
-// formatMessage 格式化日志消息为Telegram格式
+// formatMessage 格式化日志消息为Telegram格式 (HTML)
 func (h *TelegramHook) formatMessage(entry *logrus.Entry) string {
 	// 级别emoji
 	levelEmoji := h.getLevelEmoji(entry.Level)
 
 	// 基本信息
 	var builder strings.Builder
-	builder.WriteString(fmt.Sprintf("%s *%s*: 系统日志警报\n", levelEmoji, strings.ToUpper(entry.Level.String())))
-	builder.WriteString(fmt.Sprintf("📝 消息: `%s`\n", escapeMarkdown(entry.Message)))
+	builder.WriteString(fmt.Sprintf("%s Level: <code>%s</code>\n", levelEmoji, strings.ToUpper(entry.Level.String())))
+	builder.WriteString(fmt.Sprintf("📝 Msg: <code>%s</code>\n", htmlEscape(entry.Message)))
 
 	// 字段信息
 	if len(entry.Data) > 0 {
 		builder.WriteString("📊 字段:\n")
 		for key, value := range entry.Data {
-			builder.WriteString(fmt.Sprintf("  • %s: `%v`\n", key, value))
-		}
-	}
-
-	// 调用位置
-	if entry.HasCaller() {
-		file := entry.Caller.File
-		// 只保留相对路径
-		if idx := strings.Index(file, "nofx/"); idx >= 0 {
-			file = file[idx:]
-		}
-		builder.WriteString(fmt.Sprintf("📍 位置: `%s:%d`\n", file, entry.Caller.Line))
-	} else {
-		// 如果entry没有caller，手动获取
-		if _, file, line, ok := runtime.Caller(8); ok {
-			if idx := strings.Index(file, "nofx/"); idx >= 0 {
-				file = file[idx:]
-			}
-			builder.WriteString(fmt.Sprintf("📍 位置: `%s:%d`\n", file, line))
+			builder.WriteString(fmt.Sprintf("  • %s: <code>%v</code>\n", htmlEscape(key), htmlEscape(fmt.Sprintf("%v", value))))
 		}
 	}
 
 	// 时间戳
-	builder.WriteString(fmt.Sprintf("🕐 时间: `%s`", entry.Time.Format("2006-01-02 15:04:05")))
+	builder.WriteString(fmt.Sprintf("🕐 Time: <code>%s</code>", entry.Time.Format("2006-01-02 15:04:05")))
 
 	return builder.String()
 }
@@ -115,7 +96,7 @@ func (h *TelegramHook) getLevelEmoji(level logrus.Level) string {
 	case logrus.ErrorLevel:
 		return "🟠"
 	case logrus.WarnLevel:
-		return "🟡"
+		return "⚠️"
 	case logrus.InfoLevel:
 		return "🟢"
 	case logrus.DebugLevel:
@@ -125,27 +106,12 @@ func (h *TelegramHook) getLevelEmoji(level logrus.Level) string {
 	}
 }
 
-// escapeMarkdown 转义Markdown特殊字符
-func escapeMarkdown(text string) string {
+// htmlEscape 转义HTML特殊字符（只需转义少量字符）
+func htmlEscape(text string) string {
 	replacer := strings.NewReplacer(
-		"_", "\\_",
-		"*", "\\*",
-		"[", "\\[",
-		"]", "\\]",
-		"(", "\\(",
-		")", "\\)",
-		"~", "\\~",
-		"`", "\\`",
-		">", "\\>",
-		"#", "\\#",
-		"+", "\\+",
-		"-", "\\-",
-		"=", "\\=",
-		"|", "\\|",
-		"{", "\\{",
-		"}", "\\}",
-		".", "\\.",
-		"!", "\\!",
+		"&", "&amp;",
+		"<", "&lt;",
+		">", "&gt;",
 	)
 	return replacer.Replace(text)
 }

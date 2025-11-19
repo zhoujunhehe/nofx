@@ -53,10 +53,19 @@ test-coverage:
 # Build
 # =============================================================================
 
+# Build variables (extract from git)
+COMMIT_ID := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+BRANCH := $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+BUILD_DATE := $(shell date +%Y%m%d-%H%M%S)
+LDFLAGS := -X main.CommitID=$(COMMIT_ID) -X main.Branch=$(BRANCH) -X main.DATE=$(BUILD_DATE)
+
 # Build backend binary
 build:
 	@echo "🔨 Building backend..."
-	go build -o nofx
+	@echo "  • Commit: $(COMMIT_ID)"
+	@echo "  • Branch: $(BRANCH)"
+	@echo "  • Date: $(BUILD_DATE)"
+	go build -ldflags="$(LDFLAGS)" -o nofx
 	@echo "✅ Backend built: ./nofx"
 
 # Build frontend
@@ -110,7 +119,10 @@ clean:
 # Build Docker images
 docker-build:
 	@echo "🐳 Building Docker images..."
-	docker compose build
+	@echo "  • Commit: $(COMMIT_ID)"
+	@echo "  • Branch: $(BRANCH)"
+	@echo "  • Date: $(BUILD_DATE)"
+	COMMIT_ID=$(COMMIT_ID) BRANCH=$(BRANCH) BUILD_DATE=$(BUILD_DATE) docker compose build
 	@echo "✅ Docker images built"
 
 # Run Docker containers
