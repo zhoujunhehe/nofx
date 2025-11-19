@@ -148,7 +148,7 @@ func (s *Server) handleCreateAgentWallet(c *gin.Context) {
 		) VALUES ($1, $2, $3, $4, $5)
 	`
 
-	db := s.database.GetDB().(*sql.DB)
+	db := s.database.GetDB().(*sqlx.DB)
 	_, err = db.Exec(
 		query,
 		mainWallet,
@@ -228,7 +228,7 @@ func (s *Server) getAgentWallet(mainWallet string) (*AgentWallet, error) {
 		WHERE main_wallet = $1
 	`
 
-	db := s.database.GetDB().(*sql.DB)
+	db := s.database.GetDB().(*sqlx.DB)
 	wallet := &AgentWallet{}
 	err := db.QueryRow(query, strings.ToLower(mainWallet)).Scan(
 		&wallet.ID,
@@ -437,7 +437,7 @@ func (s *Server) handleAuthorizeAgent(c *gin.Context) {
 		WHERE main_wallet = $2
 	`
 
-	db := s.database.GetDB().(*sql.DB)
+	db := s.database.GetDB().(*sqlx.DB)
 	_, err = db.Exec(updateQuery, req.Signature, mainWallet)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, AuthorizeAgentResponse{
@@ -515,7 +515,7 @@ func (s *Server) handleConfirmBuilderFee(c *gin.Context) {
 		WHERE main_wallet = $2
 	`
 
-	db := s.database.GetDB().(*sql.DB)
+	db := s.database.GetDB().(*sqlx.DB)
 	_, err = db.Exec(updateQuery, req.MaxFeeRate, mainWallet)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, ConfirmBuilderFeeResponse{
