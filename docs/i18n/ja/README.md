@@ -3,7 +3,6 @@
 [![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat&logo=go)](https://golang.org/)
 [![React](https://img.shields.io/badge/React-18+-61DAFB?style=flat&logo=react)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?style=flat&logo=typescript)](https://www.typescriptlang.org/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Backed by Amber.ac](https://img.shields.io/badge/Backed%20by-Amber.ac-orange.svg)](https://amber.ac)
 
 **言語:** [English](../../../README.md) | [中文](../zh-CN/README.md) | [Українська](../uk/README.md) | [Русский](../ru/README.md) | [日本語](README.md)
@@ -31,7 +30,6 @@
 - [🛠️ よくある問題](#️-よくある問題)
 - [📈 パフォーマンス最適化のヒント](#-パフォーマンス最適化のヒント)
 - [🔄 変更履歴](#-変更履歴)
-- [📄 ライセンス](#-ライセンス)
 - [🤝 貢献](#-貢献)
 - [📬 お問い合わせ](#-お問い合わせ)
 - [🙏 謝辞](#-謝辞)
@@ -1388,12 +1386,6 @@ sudo apt-get install libta-lib0-dev
 - 基本的なAI取引機能
 - 判断ログシステム
 - シンプルなWebインターフェース
-
----
-
-## 📄 ライセンス
-
-MITライセンス - 詳細は[LICENSE](LICENSE)ファイルを参照してください
 
 ---
 
