@@ -1111,6 +1111,16 @@ func (d *PostgreSQLDatabase) GetDB() interface{} {
 	return d.db
 }
 
+// GetAgentWalletEncryptedKey 获取激活状态 Agent Wallet 的加密私钥
+func (d *PostgreSQLDatabase) GetAgentWalletEncryptedKey(agentAddress string) (string, error) {
+	var encryptedPrivateKey string
+	err := d.db.QueryRow(
+		`SELECT encrypted_private_key FROM agent_wallets WHERE agent_address = $1 AND status = 'ACTIVE'`,
+		strings.ToLower(agentAddress),
+	).Scan(&encryptedPrivateKey)
+	return encryptedPrivateKey, err
+}
+
 // Close 关闭数据库连接
 func (d *PostgreSQLDatabase) Close() error {
 	return d.db.Close()

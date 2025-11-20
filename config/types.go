@@ -62,6 +62,7 @@ type DatabaseInterface interface {
 	SetCryptoService(cryptoService interface{}) error
 	GetCustomCoins() ([]string, error)
 	GetDB() interface{} // 获取底层数据库连接（用于直接 SQL 操作）
+	GetAgentWalletEncryptedKey(agentAddress string) (string, error)
 	Close() error
 }
 
@@ -239,6 +240,9 @@ func (w *DatabaseWrapper) GetCustomCoins() ([]string, error) {
 }
 func (w *DatabaseWrapper) GetDB() interface{} {
 	return w.impl.GetDB()
+}
+func (w *DatabaseWrapper) GetAgentWalletEncryptedKey(agentAddress string) (string, error) {
+	return w.impl.GetAgentWalletEncryptedKey(agentAddress)
 }
 func (w *DatabaseWrapper) Close() error {
 	return w.impl.Close()

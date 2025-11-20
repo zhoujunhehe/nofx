@@ -18,8 +18,6 @@ import (
 	"os"
 	"strings"
 	"sync"
-
-	"github.com/jmoiron/sqlx"
 )
 
 // EncryptionManager 加密管理器（單例模式）
@@ -28,6 +26,11 @@ type EncryptionManager struct {
 	publicKeyPEM string
 	masterKey    []byte // 用於數據庫加密的主密鑰
 	mu           sync.RWMutex
+}
+
+// AgentWalletStore 抽象 Agent Wallet 数据源，提供加密私钥读取能力
+type AgentWalletStore interface {
+	GetAgentWalletEncryptedKey(agentAddress string) (string, error)
 }
 
 var (
@@ -279,7 +282,6 @@ func (em *EncryptionManager) loadOrGenerateMasterKey() error {
 func (em *EncryptionManager) EncryptForDatabase(plaintext string) (string, error) {
 	em.mu.RLock()
 	defer em.mu.RUnlock()
-
 	block, err := aes.NewCipher(em.masterKey)
 	if err != nil {
 		return "", err
@@ -381,16 +383,13 @@ func (em *EncryptionManager) RotateMasterKey() error {
 // 1. BACKEND_AGENT: 前缀 - 从数据库查询后端托管的 Agent Wallet 私钥
 // 2. ENC:v1: 前缀 - 加密格式，需要解密
 // 3. 原始十六进制字符串 - 直接使用
-func ResolveHyperliquidPrivateKey(db *sqlx.DB, apiKey string) (string, error) {
+func ResolveHyperliquidPrivateKey(store AgentWalletStore, apiKey string) (string, error) {
 	// 情况1: BACKEND_AGENT: 前缀
 	if strings.HasPrefix(apiKey, "BACKEND_AGENT:") {
 		// 提取 agent address
-		agentAddress := strings.TrimPrefix(apiKey, "BACKEND_AGENT:")
+		agentAddress := strings.ToLower(strings.TrimPrefix(apiKey, "BACKEND_AGENT:"))
 
-		// 查询 agent wallet
-		query := `SELECT encrypted_private_key FROM agent_wallets WHERE agent_address = $1 AND status = 'ACTIVE'`
-		var encryptedPrivateKey string
-		err := db.Get(&encryptedPrivateKey, query, strings.ToLower(agentAddress))
+		encryptedPrivateKey, err := store.GetAgentWalletEncryptedKey(agentAddress)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return "", fmt.Errorf("未找到激活的 Agent Wallet: %s", agentAddress)

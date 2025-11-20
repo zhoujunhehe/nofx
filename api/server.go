@@ -22,7 +22,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/jmoiron/sqlx"
 )
 
 // Server HTTP API服务器
@@ -682,7 +681,7 @@ func (s *Server) handleCreateTrader(c *gin.Context) {
 			tempTrader = trader.NewFuturesTrader(exchangeCfg.APIKey, exchangeCfg.SecretKey, userID)
 		case "hyperliquid":
 			// 解析 Hyperliquid 私钥（支持后端托管的 Agent Wallet）
-			privateKey, decryptErr := crypto.ResolveHyperliquidPrivateKey(s.database.GetDB().(*sqlx.DB), exchangeCfg.APIKey)
+			privateKey, decryptErr := crypto.ResolveHyperliquidPrivateKey(s.database, exchangeCfg.APIKey)
 			if decryptErr != nil {
 				logger.Errorf("⚠️ 解析 Hyperliquid 私钥失败: %v", decryptErr)
 				createErr = decryptErr
