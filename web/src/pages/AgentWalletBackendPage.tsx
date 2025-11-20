@@ -18,6 +18,7 @@ import {
   Network,
 } from 'lucide-react'
 import { useAccount, useWalletClient } from 'wagmi'
+import { useConnectModal } from '@rainbow-me/rainbowkit'
 import {
   createAgentWallet,
   getAgentWallet,
@@ -38,6 +39,7 @@ export function AgentWalletBackendPage() {
   const { language } = useLanguage()
   const { address, isConnected, chain } = useAccount()
   const { data: walletClient } = useWalletClient()
+  const { openConnectModal } = useConnectModal()
 
   const [loading, setLoading] = useState(false)
   const [agentWallet, setAgentWallet] = useState<AgentWallet | null>(null)
@@ -595,8 +597,8 @@ export function AgentWalletBackendPage() {
 
             <div className="flex gap-3">
               <button
-                onClick={handleCreateAgent}
-                disabled={!isConnected || loading}
+                onClick={isConnected ? handleCreateAgent : openConnectModal}
+                disabled={loading}
                 className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{
                   background: loading
@@ -609,6 +611,13 @@ export function AgentWalletBackendPage() {
                   <>
                     <RefreshCw className="h-4 w-4 animate-spin" />
                     {language === 'zh' ? '创建中...' : 'Creating...'}
+                  </>
+                ) : !isConnected ? (
+                  <>
+                    <Wallet className="h-4 w-4" />
+                    {language === 'zh'
+                      ? '连接钱包'
+                      : 'Connect Wallet'}
                   </>
                 ) : (
                   <>

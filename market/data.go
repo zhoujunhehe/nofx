@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"math"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"nofx/logger"
 	"nofx/market/kline"
 )
 
@@ -79,7 +79,7 @@ func GetWithIntervals(symbol string, intervals []string) (*Data, error) {
 	// 获取短期K线数据
 	kShort, okShort := kline.Default.GetRecentKlines(symbol, shortInterval, 100)
 	if !okShort || len(kShort) == 0 {
-		log.Printf("Warning: kline %s for %s not ready", shortInterval, symbol)
+		logger.Warnf("Warning: kline %s for %s not ready", shortInterval, symbol)
 	}
 	klinesShort = convert(kShort)
 
@@ -88,7 +88,7 @@ func GetWithIntervals(symbol string, intervals []string) (*Data, error) {
 	if shortInterval != longInterval {
 		kLong, okLong := kline.Default.GetRecentKlines(symbol, longInterval, 100)
 		if !okLong || len(kLong) == 0 {
-			log.Printf("Warning: kline %s for %s not ready", longInterval, symbol)
+			logger.Warnf("Warning: kline %s for %s not ready", longInterval, symbol)
 		}
 		klinesLongConverted = convert(kLong)
 	} else {

@@ -3,8 +3,8 @@ package decision
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"math"
+	"nofx/logger"
 	"nofx/market"
 	"nofx/mcp"
 	"nofx/pool"
@@ -221,7 +221,7 @@ func fetchMarketDataForContext(ctx *Context) error {
 			oiValue := data.OpenInterest.Latest * data.CurrentPrice
 			oiValueInMillions := oiValue / 1_000_000 // 转换为百万美元单位
 			if oiValueInMillions < minOIThresholdMillions {
-				log.Printf("⚠️  %s 持仓价值过低(%.2fM USD < %.1fM)，跳过此币种 [持仓量:%.0f × 价格:%.4f]",
+				logger.Infof("⚠️  %s 持仓价值过低(%.2fM USD < %.1fM)，跳过此币种 [持仓量:%.0f × 价格:%.4f]",
 					symbol, oiValueInMillions, minOIThresholdMillions, data.OpenInterest.Latest, data.CurrentPrice)
 				continue
 			}
@@ -318,11 +318,11 @@ func buildSystemPrompt(accountEquity float64, btcEthLeverage, altcoinLeverage in
 	template, err := GetPromptTemplate(templateName)
 	if err != nil {
 		// 如果模板不存在，记录错误并使用 default
-		log.Printf("⚠️  提示词模板 '%s' 不存在，使用 default: %v", templateName, err)
+		logger.Warnf("⚠️  提示词模板 '%s' 不存在，使用 default: %v", templateName, err)
 		template, err = GetPromptTemplate("default")
 		if err != nil {
 			// 如果连 default 都不存在，使用内置的简化版本
-			log.Printf("❌ 无法加载任何提示词模板，使用内置简化版本")
+			logger.Errorf("❌ 无法加载任何提示词模板，使用内置简化版本")
 			sb.WriteString("你是专业的加密货币交易AI。请根据市场数据做出交易决策。\n\n")
 		} else {
 			sb.WriteString(template.Content)
@@ -505,20 +505,20 @@ func parseFullDecisionResponse(aiResponse string, accountEquity float64, btcEthL
 func extractCoTTrace(response string) string {
 	// 方法1: 优先尝试提取 <reasoning> 标签内容
 	if match := reReasoningTag.FindStringSubmatch(response); match != nil && len(match) > 1 {
-		log.Printf("✓ 使用 <reasoning> 标签提取思维链")
+		logger.Infof("✓ 使用 <reasoning> 标签提取思维链")
 		return strings.TrimSpace(match[1])
 	}
 
 	// 方法2: 如果没有 <reasoning> 标签，但有 <decision> 标签，提取 <decision> 之前的内容
 	if decisionIdx := strings.Index(response, "<decision>"); decisionIdx > 0 {
-		log.Printf("✓ 提取 <decision> 标签之前的内容作为思维链")
+		logger.Infof("✓ 提取 <decision> 标签之前的内容作为思维链")
 		return strings.TrimSpace(response[:decisionIdx])
 	}
 
 	// 方法3: 后备方案 - 查找JSON数组的开始位置
 	jsonStart := strings.Index(response, "[")
 	if jsonStart > 0 {
-		log.Printf("⚠️  使用旧版格式（[ 字符分离）提取思维链")
+		logger.Warnf("⚠️  使用旧版格式（[ 字符分离）提取思维链")
 		return strings.TrimSpace(response[:jsonStart])
 	}
 
@@ -540,11 +540,11 @@ func extractDecisions(response string) ([]Decision, error) {
 	var jsonPart string
 	if match := reDecisionTag.FindStringSubmatch(s); match != nil && len(match) > 1 {
 		jsonPart = strings.TrimSpace(match[1])
-		log.Printf("✓ 使用 <decision> 标签提取JSON")
+		logger.Infof("✓ 使用 <decision> 标签提取JSON")
 	} else {
 		// 后备方案：使用整个响应
 		jsonPart = s
-		log.Printf("⚠️  未找到 <decision> 标签，使用全文搜索JSON")
+		logger.Warnf("⚠️  未找到 <decision> 标签，使用全文搜索JSON")
 	}
 
 	// 修复 jsonPart 中的全角字符
@@ -570,7 +570,7 @@ func extractDecisions(response string) ([]Decision, error) {
 	jsonContent := strings.TrimSpace(reJSONArray.FindString(jsonPart))
 	if jsonContent == "" {
 		// 🔧 安全回退 (Safe Fallback)：当AI只输出思维链没有JSON时，生成保底决策（避免系统崩溃）
-		log.Printf("⚠️  [SafeFallback] AI未输出JSON决策，进入安全等待模式 (AI response without JSON, entering safe wait mode)")
+		logger.Warnf("⚠️  [SafeFallback] AI未输出JSON决策，进入安全等待模式 (AI response without JSON, entering safe wait mode)")
 
 		// 提取思维链摘要（最多 240 字符）
 		cotSummary := jsonPart
@@ -752,7 +752,7 @@ func validateDecision(d *Decision, accountEquity float64, btcEthLeverage, altcoi
 			return fmt.Errorf("杠杆必须大于0: %d", d.Leverage)
 		}
 		if d.Leverage > maxLeverage {
-			log.Printf("⚠️  [Leverage Fallback] %s 杠杆超限 (%dx > %dx)，自动调整为上限值 %dx",
+			logger.Warnf("⚠️  [Leverage Fallback] %s 杠杆超限 (%dx > %dx)，自动调整为上限值 %dx",
 				d.Symbol, d.Leverage, maxLeverage, maxLeverage)
 			d.Leverage = maxLeverage // 自动修正为上限值
 		}

@@ -5,8 +5,8 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"log"
 	"nofx/hook"
+	"nofx/logger"
 	"strconv"
 	"strings"
 	"sync"
@@ -80,7 +80,7 @@ func NewFuturesTrader(apiKey, secretKey string, userId string) *FuturesTrader {
 	// 设置双向持仓模式（Hedge Mode）
 	// 这是必需的，因为代码中使用了 PositionSide (LONG/SHORT)
 	if err := trader.setDualSidePosition(); err != nil {
-		log.Printf("⚠️ 设置双向持仓模式失败: %v (如果已是双向模式则忽略此警告)", err)
+		logger.Infof("⚠️ 设置双向持仓模式失败: %v (如果已是双向模式则忽略此警告)", err)
 	}
 
 	return trader
@@ -96,15 +96,15 @@ func (t *FuturesTrader) setDualSidePosition() error {
 	if err != nil {
 		// 如果错误信息包含"No need to change"，说明已经是双向持仓模式
 		if strings.Contains(err.Error(), "No need to change position side") {
-			log.Printf("  ✓ 账户已是双向持仓模式（Hedge Mode）")
+			logger.Infof("  ✓ 账户已是双向持仓模式（Hedge Mode）")
 			return nil
 		}
 		// 其他错误则返回（但在调用方不会中断初始化）
 		return err
 	}
 
-	log.Printf("  ✓ 账户已切换为双向持仓模式（Hedge Mode）")
-	log.Printf("  ℹ️  双向持仓模式允许同时持有多单和空单")
+	logger.Infof("  ✓ 账户已切换为双向持仓模式（Hedge Mode）")
+	logger.Infof("  ℹ️  双向持仓模式允许同时持有多单和空单")
 	return nil
 }
 
@@ -112,14 +112,14 @@ func (t *FuturesTrader) setDualSidePosition() error {
 func syncBinanceServerTime(client *futures.Client) {
 	serverTime, err := client.NewServerTimeService().Do(context.Background())
 	if err != nil {
-		log.Printf("⚠️ 同步币安服务器时间失败: %v", err)
+		logger.Error("⚠️ 同步币安服务器时间失败: %v", err)
 		return
 	}
 
 	now := time.Now().UnixMilli()
 	offset := now - serverTime
 	client.TimeOffset = offset
-	log.Printf("⏱ 已同步币安服务器时间，偏移 %dms", offset)
+	logger.Infof("⏱ 已同步币安服务器时间，偏移 %dms", offset)
 }
 
 // GetBalance 获取账户余额（带缓存）
@@ -129,16 +129,16 @@ func (t *FuturesTrader) GetBalance() (map[string]interface{}, error) {
 	if t.cachedBalance != nil && time.Since(t.balanceCacheTime) < t.cacheDuration {
 		cacheAge := time.Since(t.balanceCacheTime)
 		t.balanceCacheMutex.RUnlock()
-		log.Printf("✓ 使用缓存的账户余额（缓存时间: %.1f秒前）", cacheAge.Seconds())
+		logger.Infof("✓ 使用缓存的账户余额（缓存时间: %.1f秒前）", cacheAge.Seconds())
 		return t.cachedBalance, nil
 	}
 	t.balanceCacheMutex.RUnlock()
 
 	// 缓存过期或不存在，调用API
-	log.Printf("🔄 缓存过期，正在调用币安API获取账户余额...")
+	logger.Infof("🔄 缓存过期，正在调用币安API获取账户余额...")
 	account, err := t.client.NewGetAccountService().Do(context.Background())
 	if err != nil {
-		log.Printf("❌ 币安API调用失败: %v", err)
+		logger.Errorf("❌ 币安API调用失败: %v", err)
 		return nil, fmt.Errorf("获取账户信息失败: %w", err)
 	}
 
@@ -147,7 +147,7 @@ func (t *FuturesTrader) GetBalance() (map[string]interface{}, error) {
 	result["availableBalance"], _ = strconv.ParseFloat(account.AvailableBalance, 64)
 	result["totalUnrealizedProfit"], _ = strconv.ParseFloat(account.TotalUnrealizedProfit, 64)
 
-	log.Printf("✓ 币安API返回: 总余额=%s, 可用=%s, 未实现盈亏=%s",
+	logger.Infof("✓ 币安API返回: 总余额=%s, 可用=%s, 未实现盈亏=%s",
 		account.TotalWalletBalance,
 		account.AvailableBalance,
 		account.TotalUnrealizedProfit)
@@ -168,13 +168,13 @@ func (t *FuturesTrader) GetPositions() ([]map[string]interface{}, error) {
 	if t.cachedPositions != nil && time.Since(t.positionsCacheTime) < t.cacheDuration {
 		cacheAge := time.Since(t.positionsCacheTime)
 		t.positionsCacheMutex.RUnlock()
-		log.Printf("✓ 使用缓存的持仓信息（缓存时间: %.1f秒前）", cacheAge.Seconds())
+		logger.Infof("✓ 使用缓存的持仓信息（缓存时间: %.1f秒前）", cacheAge.Seconds())
 		return t.cachedPositions, nil
 	}
 	t.positionsCacheMutex.RUnlock()
 
 	// 缓存过期或不存在，调用API
-	log.Printf("🔄 缓存过期，正在调用币安API获取持仓信息...")
+	logger.Infof("🔄 缓存过期，正在调用币安API获取持仓信息...")
 	positions, err := t.client.NewGetPositionRiskService().Do(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("获取持仓失败: %w", err)
@@ -238,31 +238,31 @@ func (t *FuturesTrader) SetMarginMode(symbol string, isCrossMargin bool) error {
 	if err != nil {
 		// 如果错误信息包含"No need to change"，说明仓位模式已经是目标值
 		if contains(err.Error(), "No need to change margin type") {
-			log.Printf("  ✓ %s 仓位模式已是 %s", symbol, marginModeStr)
+			logger.Infof("  ✓ %s 仓位模式已是 %s", symbol, marginModeStr)
 			return nil
 		}
 		// 如果有持仓，无法更改仓位模式，但不影响交易
 		if contains(err.Error(), "Margin type cannot be changed if there exists position") {
-			log.Printf("  ⚠️ %s 有持仓，无法更改仓位模式，继续使用当前模式", symbol)
+			logger.Infof("  ⚠️ %s 有持仓，无法更改仓位模式，继续使用当前模式", symbol)
 			return nil
 		}
 		// 检测多资产模式（错误码 -4168）
 		if contains(err.Error(), "Multi-Assets mode") || contains(err.Error(), "-4168") || contains(err.Error(), "4168") {
-			log.Printf("  ⚠️ %s 检测到多资产模式，强制使用全仓模式", symbol)
-			log.Printf("  💡 提示：如需使用逐仓模式，请在币安关闭多资产模式")
+			logger.Infof("  ⚠️ %s 检测到多资产模式，强制使用全仓模式", symbol)
+			logger.Infof("  💡 提示：如需使用逐仓模式，请在币安关闭多资产模式")
 			return nil
 		}
 		// 检测统一账户 API（Portfolio Margin）
 		if contains(err.Error(), "unified") || contains(err.Error(), "portfolio") || contains(err.Error(), "Portfolio") {
-			log.Printf("  ❌ %s 检测到统一账户 API，无法进行合约交易", symbol)
+			logger.Warnf("  ❌ %s 检测到统一账户 API，无法进行合约交易", symbol)
 			return fmt.Errorf("请使用「现货与合约交易」API 权限，不要使用「统一账户 API」")
 		}
-		log.Printf("  ⚠️ 设置仓位模式失败: %v", err)
+		logger.Infof("  ⚠️ 设置仓位模式失败: %v", err)
 		// 不返回错误，让交易继续
 		return nil
 	}
 
-	log.Printf("  ✓ %s 仓位模式已设置为 %s", symbol, marginModeStr)
+	logger.Infof("  ✓ %s 仓位模式已设置为 %s", symbol, marginModeStr)
 	return nil
 }
 
@@ -284,7 +284,7 @@ func (t *FuturesTrader) SetLeverage(symbol string, leverage int) error {
 
 	// 如果当前杠杆已经是目标杠杆，跳过
 	if currentLeverage == leverage && currentLeverage > 0 {
-		log.Printf("  ✓ %s 杠杆已是 %dx，无需切换", symbol, leverage)
+		logger.Infof("  ✓ %s 杠杆已是 %dx，无需切换", symbol, leverage)
 		return nil
 	}
 
@@ -297,16 +297,16 @@ func (t *FuturesTrader) SetLeverage(symbol string, leverage int) error {
 	if err != nil {
 		// 如果错误信息包含"No need to change"，说明杠杆已经是目标值
 		if contains(err.Error(), "No need to change") {
-			log.Printf("  ✓ %s 杠杆已是 %dx", symbol, leverage)
+			logger.Infof("  ✓ %s 杠杆已是 %dx", symbol, leverage)
 			return nil
 		}
 		return fmt.Errorf("设置杠杆失败: %w", err)
 	}
 
-	log.Printf("  ✓ %s 杠杆已切换为 %dx", symbol, leverage)
+	logger.Infof("  ✓ %s 杠杆已切换为 %dx", symbol, leverage)
 
 	// 切换杠杆后等待5秒（避免冷却期错误）
-	log.Printf("  ⏱ 等待5秒冷却期...")
+	logger.Infof("  ⏱ 等待5秒冷却期...")
 	time.Sleep(5 * time.Second)
 
 	return nil
@@ -316,7 +316,7 @@ func (t *FuturesTrader) SetLeverage(symbol string, leverage int) error {
 func (t *FuturesTrader) OpenLong(symbol string, quantity float64, leverage int) (map[string]interface{}, error) {
 	// 先取消该币种的所有委托单（清理旧的止损止盈单）
 	if err := t.CancelAllOrders(symbol); err != nil {
-		log.Printf("  ⚠ 取消旧委托单失败（可能没有委托单）: %v", err)
+		logger.Infof("  ⚠ 取消旧委托单失败（可能没有委托单）: %v", err)
 	}
 
 	// 设置杠杆
@@ -357,8 +357,8 @@ func (t *FuturesTrader) OpenLong(symbol string, quantity float64, leverage int) 
 		return nil, fmt.Errorf("开多仓失败: %w", err)
 	}
 
-	log.Printf("✓ 开多仓成功: %s 数量: %s", symbol, quantityStr)
-	log.Printf("  订单ID: %d", order.OrderID)
+	logger.Infof("✓ 开多仓成功: %s 数量: %s", symbol, quantityStr)
+	logger.Infof("  订单ID: %d", order.OrderID)
 
 	result := make(map[string]interface{})
 	result["orderId"] = order.OrderID
@@ -371,7 +371,7 @@ func (t *FuturesTrader) OpenLong(symbol string, quantity float64, leverage int) 
 func (t *FuturesTrader) OpenShort(symbol string, quantity float64, leverage int) (map[string]interface{}, error) {
 	// 先取消该币种的所有委托单（清理旧的止损止盈单）
 	if err := t.CancelAllOrders(symbol); err != nil {
-		log.Printf("  ⚠ 取消旧委托单失败（可能没有委托单）: %v", err)
+		logger.Infof("  ⚠ 取消旧委托单失败（可能没有委托单）: %v", err)
 	}
 
 	// 设置杠杆
@@ -412,8 +412,8 @@ func (t *FuturesTrader) OpenShort(symbol string, quantity float64, leverage int)
 		return nil, fmt.Errorf("开空仓失败: %w", err)
 	}
 
-	log.Printf("✓ 开空仓成功: %s 数量: %s", symbol, quantityStr)
-	log.Printf("  订单ID: %d", order.OrderID)
+	logger.Infof("✓ 开空仓成功: %s 数量: %s", symbol, quantityStr)
+	logger.Infof("  订单ID: %d", order.OrderID)
 
 	result := make(map[string]interface{})
 	result["orderId"] = order.OrderID
@@ -463,11 +463,11 @@ func (t *FuturesTrader) CloseLong(symbol string, quantity float64) (map[string]i
 		return nil, fmt.Errorf("平多仓失败: %w", err)
 	}
 
-	log.Printf("✓ 平多仓成功: %s 数量: %s", symbol, quantityStr)
+	logger.Infof("✓ 平多仓成功: %s 数量: %s", symbol, quantityStr)
 
 	// 平仓后取消该币种的所有挂单（止损止盈单）
 	if err := t.CancelAllOrders(symbol); err != nil {
-		log.Printf("  ⚠ 取消挂单失败: %v", err)
+		logger.Infof("  ⚠ 取消挂单失败: %v", err)
 	}
 
 	result := make(map[string]interface{})
@@ -518,11 +518,11 @@ func (t *FuturesTrader) CloseShort(symbol string, quantity float64) (map[string]
 		return nil, fmt.Errorf("平空仓失败: %w", err)
 	}
 
-	log.Printf("✓ 平空仓成功: %s 数量: %s", symbol, quantityStr)
+	logger.Infof("✓ 平空仓成功: %s 数量: %s", symbol, quantityStr)
 
 	// 平仓后取消该币种的所有挂单（止损止盈单）
 	if err := t.CancelAllOrders(symbol); err != nil {
-		log.Printf("  ⚠ 取消挂单失败: %v", err)
+		logger.Infof("  ⚠ 取消挂单失败: %v", err)
 	}
 
 	result := make(map[string]interface{})
@@ -559,19 +559,19 @@ func (t *FuturesTrader) CancelStopLossOrders(symbol string) error {
 			if err != nil {
 				errMsg := fmt.Sprintf("订单ID %d: %v", order.OrderID, err)
 				cancelErrors = append(cancelErrors, fmt.Errorf("%s", errMsg))
-				log.Printf("  ⚠ 取消止损单失败: %s", errMsg)
+				logger.Errorf("  ⚠ 取消止损单失败: %s", errMsg)
 				continue
 			}
 
 			canceledCount++
-			log.Printf("  ✓ 已取消止损单 (订单ID: %d, 类型: %s, 方向: %s)", order.OrderID, orderType, order.PositionSide)
+			logger.Infof("  ✓ 已取消止损单 (订单ID: %d, 类型: %s, 方向: %s)", order.OrderID, orderType, order.PositionSide)
 		}
 	}
 
 	if canceledCount == 0 && len(cancelErrors) == 0 {
-		log.Printf("  ℹ %s 没有止损单需要取消", symbol)
+		logger.Infof("  ℹ %s 没有止损单需要取消", symbol)
 	} else if canceledCount > 0 {
-		log.Printf("  ✓ 已取消 %s 的 %d 个止损单", symbol, canceledCount)
+		logger.Infof("  ✓ 已取消 %s 的 %d 个止损单", symbol, canceledCount)
 	}
 
 	// 如果所有取消都失败了，返回错误
@@ -609,19 +609,19 @@ func (t *FuturesTrader) CancelTakeProfitOrders(symbol string) error {
 			if err != nil {
 				errMsg := fmt.Sprintf("订单ID %d: %v", order.OrderID, err)
 				cancelErrors = append(cancelErrors, fmt.Errorf("%s", errMsg))
-				log.Printf("  ⚠ 取消止盈单失败: %s", errMsg)
+				logger.Errorf("  ⚠ 取消止盈单失败: %s", errMsg)
 				continue
 			}
 
 			canceledCount++
-			log.Printf("  ✓ 已取消止盈单 (订单ID: %d, 类型: %s, 方向: %s)", order.OrderID, orderType, order.PositionSide)
+			logger.Infof("  ✓ 已取消止盈单 (订单ID: %d, 类型: %s, 方向: %s)", order.OrderID, orderType, order.PositionSide)
 		}
 	}
 
 	if canceledCount == 0 && len(cancelErrors) == 0 {
-		log.Printf("  ℹ %s 没有止盈单需要取消", symbol)
+		logger.Infof("  ℹ %s 没有止盈单需要取消", symbol)
 	} else if canceledCount > 0 {
-		log.Printf("  ✓ 已取消 %s 的 %d 个止盈单", symbol, canceledCount)
+		logger.Infof("  ✓ 已取消 %s 的 %d 个止盈单", symbol, canceledCount)
 	}
 
 	// 如果所有取消都失败了，返回错误
@@ -642,7 +642,7 @@ func (t *FuturesTrader) CancelAllOrders(symbol string) error {
 		return fmt.Errorf("取消挂单失败: %w", err)
 	}
 
-	log.Printf("  ✓ 已取消 %s 的所有挂单", symbol)
+	logger.Infof("  ✓ 已取消 %s 的所有挂单", symbol)
 	return nil
 }
 
@@ -674,20 +674,20 @@ func (t *FuturesTrader) CancelStopOrders(symbol string) error {
 				Do(context.Background())
 
 			if err != nil {
-				log.Printf("  ⚠ 取消订单 %d 失败: %v", order.OrderID, err)
+				logger.Errorf("  ⚠ 取消订单 %d 失败: %v", order.OrderID, err)
 				continue
 			}
 
 			canceledCount++
-			log.Printf("  ✓ 已取消 %s 的止盈/止损单 (订单ID: %d, 类型: %s)",
+			logger.Infof("  ✓ 已取消 %s 的止盈/止损单 (订单ID: %d, 类型: %s)",
 				symbol, order.OrderID, orderType)
 		}
 	}
 
 	if canceledCount == 0 {
-		log.Printf("  ℹ %s 没有止盈/止损单需要取消", symbol)
+		logger.Infof("  ℹ %s 没有止盈/止损单需要取消", symbol)
 	} else {
-		log.Printf("  ✓ 已取消 %s 的 %d 个止盈/止损单", symbol, canceledCount)
+		logger.Infof("  ✓ 已取消 %s 的 %d 个止盈/止损单", symbol, canceledCount)
 	}
 
 	return nil
@@ -754,7 +754,7 @@ func (t *FuturesTrader) SetStopLoss(symbol string, positionSide string, quantity
 		return fmt.Errorf("设置止损失败: %w", err)
 	}
 
-	log.Printf("  止损价设置: %.4f", stopPrice)
+	logger.Infof("  止损价设置: %.4f", stopPrice)
 	return nil
 }
 
@@ -792,7 +792,7 @@ func (t *FuturesTrader) SetTakeProfit(symbol string, positionSide string, quanti
 		return fmt.Errorf("设置止盈失败: %w", err)
 	}
 
-	log.Printf("  止盈价设置: %.4f", takeProfitPrice)
+	logger.Infof("  止盈价设置: %.4f", takeProfitPrice)
 	return nil
 }
 
@@ -836,14 +836,14 @@ func (t *FuturesTrader) GetSymbolPrecision(symbol string) (int, error) {
 				if filter["filterType"] == "LOT_SIZE" {
 					stepSize := filter["stepSize"].(string)
 					precision := calculatePrecision(stepSize)
-					log.Printf("  %s 数量精度: %d (stepSize: %s)", symbol, precision, stepSize)
+					logger.Infof("  %s 数量精度: %d (stepSize: %s)", symbol, precision, stepSize)
 					return precision, nil
 				}
 			}
 		}
 	}
 
-	log.Printf("  ⚠ %s 未找到精度信息，使用默认精度3", symbol)
+	logger.Infof("  ⚠ %s 未找到精度信息，使用默认精度3", symbol)
 	return 3, nil // 默认精度为3
 }
 

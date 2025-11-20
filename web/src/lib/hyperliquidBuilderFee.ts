@@ -11,7 +11,7 @@ import { type WalletClient } from 'viem'
 const HYPERLIQUID_DOMAIN = {
   name: 'HyperliquidSignTransaction',
   version: '1',
-  chainId: 421614, // Hyperliquid L1 (0x66eee) - matches Python SDK user_signed_payload
+  chainId: 42161, //arbitrum one mainnet chain id
   verifyingContract:
     '0x0000000000000000000000000000000000000000' as `0x${string}`,
 }
@@ -143,7 +143,7 @@ export async function approveHyperliquidBuilderFee(
     // Step 2: Build action payload (use the SAME nonce from signature)
     const action = {
       type: 'approveBuilderFee',
-      signatureChainId: '0x66eee', // Must match the value in message (Hyperliquid L1 chainId)
+      signatureChainId: '0xa4b1',// 42161
       hyperliquidChain,
       builder: builderAddress,
       maxFeeRate: maxFeeRatePercentage,

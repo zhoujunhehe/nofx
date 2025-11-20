@@ -5,6 +5,7 @@ import { t } from '../i18n/translations'
 import { toast } from 'sonner'
 import { Pencil, Plus, X as IconX } from 'lucide-react'
 import { httpClient } from '../lib/httpClient'
+import { HyperLiquidDepositModal } from './HyperLiquidDepositModal'
 
 // 提取下划线后面的名称部分
 function getShortName(fullName: string): string {
@@ -79,6 +80,7 @@ export function TraderConfigModal({
   ])
   const [selectedKlineIntervals, setSelectedKlineIntervals] = useState<string[]>([])
   const [showKlineSelector, setShowKlineSelector] = useState(false)
+  const [showHyperLiquidTutorial, setShowHyperLiquidTutorial] = useState(false)
 
   useEffect(() => {
     if (traderData) {
@@ -302,12 +304,17 @@ export function TraderConfigModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4 overflow-y-auto">
-      <div
-        className="bg-[#1E2329] border border-[#2B3139] rounded-xl shadow-2xl max-w-3xl w-full my-8"
-        style={{ maxHeight: 'calc(100vh - 4rem)' }}
-        onClick={(e) => e.stopPropagation()}
-      >
+    <>
+      <HyperLiquidDepositModal 
+        isOpen={showHyperLiquidTutorial} 
+        onClose={() => setShowHyperLiquidTutorial(false)} 
+      />
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4 overflow-y-auto">
+        <div
+          className="bg-[#1E2329] border border-[#2B3139] rounded-xl shadow-2xl max-w-3xl w-full my-8"
+          style={{ maxHeight: 'calc(100vh - 4rem)' }}
+          onClick={(e) => e.stopPropagation()}
+        >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-[#2B3139] bg-gradient-to-r from-[#1E2329] to-[#252B35] sticky top-0 z-10 rounded-t-xl">
           <div className="flex items-center gap-3">
@@ -398,6 +405,16 @@ export function TraderConfigModal({
                       </option>
                     ))}
                   </select>
+                  {formData.exchange_id.toLowerCase().includes('hyperliquid') && (
+                    <button
+                      type="button"
+                      onClick={() => setShowHyperLiquidTutorial(true)}
+                      className="mt-2 w-full flex items-center justify-center gap-2 px-3 py-2 bg-[#1E2329] border border-[#2B3139] rounded text-[#F0B90B] text-sm hover:bg-[#2B3139] transition-colors"
+                    >
+                      <span className="text-lg">🌊</span>
+                      如何充值 HyperLiquid?
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -889,5 +906,6 @@ export function TraderConfigModal({
         </div>
       </div>
     </div>
+    </>
   )
 }

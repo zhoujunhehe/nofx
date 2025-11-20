@@ -6,9 +6,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"nofx/crypto"
+	"nofx/logger"
 	"strings"
 	"time"
 
@@ -355,7 +355,7 @@ func (s *Server) handleAuthorizeAgent(c *gin.Context) {
 	// 构建 ApproveAgent action (flat structure, matching Python SDK)
 	action := map[string]interface{}{
 		"type":             "approveAgent",
-		"signatureChainId": "0x66eee", // Hyperliquid L1 chain ID (matches Python SDK)
+		"signatureChainId": "0xa4b1", // arbitrum one mainnet chain id
 		"hyperliquidChain": wallet.HyperliquidChain,
 		"agentAddress":     wallet.AgentAddress,
 		"nonce":            req.Nonce,
@@ -388,10 +388,10 @@ func (s *Server) handleAuthorizeAgent(c *gin.Context) {
 	}
 
 	// 调试日志：打印发送给 Hyperliquid 的完整 payload
-	log.Printf("🔍 [DEBUG] Sending to Hyperliquid API: %s", hyperliquidAPI)
-	log.Printf("🔍 [DEBUG] Main Wallet: %s", mainWallet)
-	log.Printf("🔍 [DEBUG] Agent Address: %s", wallet.AgentAddress)
-	log.Printf("🔍 [DEBUG] Request Payload: %s", string(jsonData))
+	logger.Infof("🔍 [DEBUG] Sending to Hyperliquid API: %s", hyperliquidAPI)
+	logger.Infof("🔍 [DEBUG] Main Wallet: %s", mainWallet)
+	logger.Infof("🔍 [DEBUG] Agent Address: %s", wallet.AgentAddress)
+	logger.Infof("🔍 [DEBUG] Request Payload: %s", string(jsonData))
 
 	resp, err := http.Post(hyperliquidAPI, "application/json", strings.NewReader(string(jsonData)))
 	if err != nil {
@@ -415,7 +415,7 @@ func (s *Server) handleAuthorizeAgent(c *gin.Context) {
 
 	// 调试日志：打印 Hyperliquid 响应
 	respJSON, _ := json.Marshal(hyperliquidResp)
-	log.Printf("🔍 [DEBUG] Hyperliquid Response: %s", string(respJSON))
+	logger.Infof("🔍 [DEBUG] Hyperliquid Response: %s", string(respJSON))
 
 	// 检查 Hyperliquid 是否返回错误
 	if status, ok := hyperliquidResp["status"].(string); ok && status == "err" {
@@ -423,7 +423,7 @@ func (s *Server) handleAuthorizeAgent(c *gin.Context) {
 		if response, ok := hyperliquidResp["response"].(string); ok {
 			errorMsg = response
 		}
-		log.Printf("❌ [ERROR] Hyperliquid rejected: %s", errorMsg)
+		logger.Errorf("❌ [ERROR] Hyperliquid rejected: %s", errorMsg)
 		c.JSON(http.StatusBadRequest, AuthorizeAgentResponse{
 			Success: false,
 			Message: "Hyperliquid rejected authorization: " + errorMsg,
