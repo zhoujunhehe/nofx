@@ -233,7 +233,7 @@ func main() {
 		if str, ok := defaultCoinsJSON.(string); ok && str != "" {
 			// 尝试从JSON解析
 			if err := json.Unmarshal([]byte(str), &defaultCoins); err != nil {
-				log.Printf("⚠️  解析default_coins配置失败: %v，使用硬编码默认值", err)
+				logger.Warnf("⚠️  解析default_coins配置失败: %v，使用硬编码默认值", err)
 				defaultCoins = []string{"BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT", "ADAUSDT", "HYPEUSDT"}
 			} else {
 				log.Printf("✓ 从数据库加载默认币种列表（共%d个）: %v", len(defaultCoins), defaultCoins)

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"nofx/logger"
 )
 
 type WSMonitor struct {
@@ -68,17 +69,17 @@ func (m *WSMonitor) Initialize(coins []string) error {
 }
 
 func (m *WSMonitor) Start(coins []string) {
-	log.Printf("启动WebSocket实时监控...")
+	logger.Info("启动WebSocket实时监控...")
 	// 初始化交易对
 	err := m.Initialize(coins)
 	if err != nil {
-		log.Printf("❌ 初始化币种失败: %v", err)
+		logger.Errorf("❌ 初始化币种失败: %v", err)
 		return
 	}
 
 	err = m.combinedClient.Connect()
 	if err != nil {
-		log.Printf("❌ 批量订阅流失败: %v", err)
+		logger.Errorf("❌ 批量订阅流失败: %v", err)
 		return
 	}
 	// 订阅逻辑已迁移至 kline 服务；此处不再订阅 K 线
@@ -86,7 +87,7 @@ func (m *WSMonitor) Start(coins []string) {
 
 func (m *WSMonitor) subscribeAll() error {
 	// K线订阅已移除
-	log.Println("跳过K线订阅（由 kline 服务负责）")
+	logger.Info("跳过K线订阅（由 kline 服务负责）")
 	return nil
 }
 
@@ -94,7 +95,7 @@ func (m *WSMonitor) handleKlineData(symbol string, ch <-chan []byte, _time strin
 	for data := range ch {
 		var klineData KlineWSData
 		if err := json.Unmarshal(data, &klineData); err != nil {
-			log.Printf("解析Kline数据失败: %v", err)
+			logger.Errorf("解析Kline数据失败: %v", err)
 			continue
 		}
 		m.processKlineUpdate(symbol, klineData, _time)
@@ -172,9 +173,9 @@ func (m *WSMonitor) GetCurrentKlines(symbol string, duration string) ([]Kline, e
 		// 订阅 WebSocket 流 (使用简化的订阅字符串)
 		subStr := strings.ToLower(symbol) + "@kline_" + duration
 		subErr := m.combinedClient.subscribeStreams([]string{subStr})
-		log.Printf("动态订阅流: %v", subStr)
+		logger.Infof("动态订阅流: %v", subStr)
 		if subErr != nil {
-			log.Printf("警告: 动态订阅%v分钟K线失败: %v (使用API数据)", duration, subErr)
+			logger.Warnf("警告: 动态订阅%v分钟K线失败: %v (使用API数据)", duration, subErr)
 		}
 
 		// ✅ FIX: 返回深拷贝而非引用

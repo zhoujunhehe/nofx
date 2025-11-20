@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"nofx/crypto"
-	"nofx/market"
 	"os"
 	"slices"
 	"strings"
@@ -878,12 +877,22 @@ func (d *PostgreSQLDatabase) GetCustomCoins() []string {
 		if s == "" {
 			continue
 		}
-		coin := market.Normalize(s)
+		coin := normalizeSymbol(s)
 		if !slices.Contains(symbols, coin) {
 			symbols = append(symbols, coin)
 		}
 	}
 	return symbols
+}
+
+// normalizeSymbol 标准化交易对符号（确保以USDT结尾）
+// 复制自 market.Normalize 以避免循环导入
+func normalizeSymbol(symbol string) string {
+	symbol = strings.ToUpper(symbol)
+	if strings.HasSuffix(symbol, "USDT") {
+		return symbol
+	}
+	return symbol + "USDT"
 }
 
 // LoadBetaCodesFromFile 从文件加载内测码到数据库
