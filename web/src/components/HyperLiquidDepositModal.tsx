@@ -5,17 +5,12 @@ import {
   ChevronRight,
   ChevronLeft,
   ExternalLink,
-  Copy,
-  Check,
   Coins,
   Globe,
   Link,
   ArrowDownToLine,
-  Key,
   Waves,
 } from 'lucide-react'
-import { useLanguage } from '../contexts/LanguageContext'
-import { t } from '../i18n/translations'
 
 interface HyperLiquidDepositModalProps {
   isOpen: boolean
@@ -26,9 +21,7 @@ export function HyperLiquidDepositModal({
   isOpen,
   onClose,
 }: HyperLiquidDepositModalProps) {
-  const { language } = useLanguage()
   const [currentStep, setCurrentStep] = useState(0)
-  const [copied, setCopied] = useState(false)
 
   if (!isOpen) return null
 
