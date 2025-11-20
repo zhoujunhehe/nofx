@@ -47,6 +47,7 @@ type AutoTraderConfig struct {
 	UseQwen     bool
 	DeepSeekKey string
 	QwenKey     string
+	GeminiKey   string
 
 	// 自定义AI API配置
 	CustomAPIURL    string
@@ -147,6 +148,15 @@ func NewAutoTrader(config AutoTraderConfig, database interface{}, userID string)
 			logger.Infof("🤖 [%s] 使用阿里云Qwen AI (自定义URL: %s, 模型: %s)", config.Name, config.CustomAPIURL, config.CustomModelName)
 		} else {
 			logger.Infof("🤖 [%s] 使用阿里云Qwen AI", config.Name)
+		}
+	} else if config.AIModel == "gemini" {
+		// 使用Gemini (支持自定义URL和Model)
+		mcpClient = mcp.NewGeminiClient()
+		mcpClient.SetAPIKey(config.GeminiKey, config.CustomAPIURL, config.CustomModelName)
+		if config.CustomAPIURL != "" || config.CustomModelName != "" {
+			logger.Infof("🤖 [%s] 使用Google Gemini AI (自定义URL: %s, 模型: %s)", config.Name, config.CustomAPIURL, config.CustomModelName)
+		} else {
+			logger.Infof("🤖 [%s] 使用Google Gemini AI", config.Name)
 		}
 	} else {
 		// 默认使用DeepSeek (支持自定义URL和Model)

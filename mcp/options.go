@@ -169,3 +169,18 @@ func WithQwenConfig(apiKey string) ClientOption {
 		c.Model = DefaultQwenModel
 	}
 }
+
+// WithGeminiConfig 设置 Gemini 配置
+//
+// 使用示例：
+//
+//	client := mcp.NewClient(mcp.WithGeminiConfig("AIza..."))
+func WithGeminiConfig(apiKey string) ClientOption {
+	return func(c *Config) {
+		c.Provider = ProviderGemini
+		c.APIKey = apiKey
+		c.BaseURL = DefaultGeminiBaseURL
+		c.Model = DefaultGeminiModel
+		c.UseFullURL = true // Gemini 使用自定义 URL 结构
+	}
+}
