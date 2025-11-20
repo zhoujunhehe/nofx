@@ -6,6 +6,7 @@ import (
 	"log"
 	"nofx/api"
 	"nofx/auth"
+	"nofx/bootstrap"
 	"nofx/config"
 	"nofx/crypto"
 	"nofx/logger"
@@ -23,9 +24,9 @@ import (
 )
 
 var (
-	CommitID  = ""
-	Branch    = ""
-	DATE      = ""
+	CommitID = ""
+	Branch   = ""
+	DATE     = ""
 )
 
 // ConfigFile 配置文件结构，只包含需要同步到数据库的字段
@@ -166,7 +167,6 @@ func main() {
 	fmt.Printf("   • Branch:  %s\n", Branch)
 	fmt.Printf("   • Built:   %s\n", DATE)
 	fmt.Println()
-
 	// 读取配置文件
 	configFile, err := loadConfigFile()
 	if err != nil {
@@ -303,12 +303,12 @@ func main() {
 
 	// 创建初始化上下文
 	// TODO : 传入实际配置, 现在并未实际使用，未来所有模块初始化都将通过上下文传递配置
-	// ctx := bootstrap.NewContext(&config.Config{})
+	ctx := bootstrap.NewContext(&config.Config{})
 
-	// // 执行所有初始化钩子
-	// if err := bootstrap.Run(ctx); err != nil {
-	// 	log.Fatalf("初始化失败: %v", err)
-	// }
+	// 执行所有初始化钩子
+	if err := bootstrap.Run(ctx); err != nil {
+		log.Fatalf("初始化失败: %v", err)
+	}
 
 	fmt.Println()
 	fmt.Println("🤖 AI全权决策模式:")
