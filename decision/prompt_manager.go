@@ -3,6 +3,7 @@ package decision
 import (
 	"fmt"
 	"log"
+	"nofx/utils"
 	"os"
 	"path/filepath"
 	"strings"
@@ -24,13 +25,17 @@ type PromptManager struct {
 var (
 	// globalPromptManager 全局提示词管理器
 	globalPromptManager *PromptManager
-	// promptsDir 提示词文件夹路径
-	promptsDir = "prompts"
 )
+
+// getPromptsDir 获取提示词目录路径
+func getPromptsDir() string {
+	return utils.GetPromptsDir()
+}
 
 // init 包初始化时加载所有提示词模板
 func init() {
 	globalPromptManager = NewPromptManager()
+	promptsDir := getPromptsDir()
 	if err := globalPromptManager.LoadTemplates(promptsDir); err != nil {
 		log.Printf("⚠️  加载提示词模板失败: %v", err)
 	} else {
@@ -158,5 +163,5 @@ func GetAllPromptTemplates() []*PromptTemplate {
 
 // ReloadPromptTemplates 重新加载所有模板（全局函数）
 func ReloadPromptTemplates() error {
-	return globalPromptManager.ReloadTemplates(promptsDir)
+	return globalPromptManager.ReloadTemplates(getPromptsDir())
 }
