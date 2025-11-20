@@ -1004,6 +1004,11 @@ func (d *PostgreSQLDatabase) initDefaultData() error {
 		return fmt.Errorf("添加custom_coins列失败: %w", err)
 	}
 
+	// 确保traders表存在kline_intervals列，防止旧环境缺少字段
+	if _, err := d.db.Exec(`ALTER TABLE traders ADD COLUMN IF NOT EXISTS kline_intervals TEXT DEFAULT '1m,15m,4h'`); err != nil {
+		return fmt.Errorf("添加kline_intervals列失败: %w", err)
+	}
+
 	// 确保exchanges表存在deleted列
 	if _, err := d.db.Exec(`ALTER TABLE exchanges ADD COLUMN IF NOT EXISTS deleted BOOLEAN DEFAULT FALSE`); err != nil {
 		return fmt.Errorf("添加deleted列失败: %w", err)
