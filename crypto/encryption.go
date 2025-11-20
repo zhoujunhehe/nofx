@@ -377,39 +377,98 @@ func (em *EncryptionManager) RotateMasterKey() error {
 }
 
 // ResolveHyperliquidPrivateKey 解析 Hyperliquid 私钥
-// 如果 apiKey 以 "BACKEND_AGENT:" 开头，则从数据库获取并解密后端托管的 Agent Wallet 私钥
-// 否则直接返回 apiKey
+// 支持三种格式：
+// 1. BACKEND_AGENT: 前缀 - 从数据库查询后端托管的 Agent Wallet 私钥
+// 2. ENC:v1: 前缀 - 加密格式，需要解密
+// 3. 原始十六进制字符串 - 直接使用
 func ResolveHyperliquidPrivateKey(db *sqlx.DB, apiKey string) (string, error) {
-	if !strings.HasPrefix(apiKey, "BACKEND_AGENT:") {
-		// 手动输入的私钥，直接返回
-		return apiKey, nil
-	}
+	// 情况1: BACKEND_AGENT: 前缀
+	if strings.HasPrefix(apiKey, "BACKEND_AGENT:") {
+		// 提取 agent address
+		agentAddress := strings.TrimPrefix(apiKey, "BACKEND_AGENT:")
 
-	// 提取 agent address
-	agentAddress := strings.TrimPrefix(apiKey, "BACKEND_AGENT:")
-
-	// 查询 agent wallet
-	query := `SELECT encrypted_private_key FROM agent_wallets WHERE agent_address = $1 AND status = 'ACTIVE'`
-	var encryptedPrivateKey string
-	err := db.Get(&encryptedPrivateKey, query, strings.ToLower(agentAddress))
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return "", fmt.Errorf("未找到激活的 Agent Wallet: %s", agentAddress)
+		// 查询 agent wallet
+		query := `SELECT encrypted_private_key FROM agent_wallets WHERE agent_address = $1 AND status = 'ACTIVE'`
+		var encryptedPrivateKey string
+		err := db.Get(&encryptedPrivateKey, query, strings.ToLower(agentAddress))
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return "", fmt.Errorf("未找到激活的 Agent Wallet: %s", agentAddress)
+			}
+			return "", fmt.Errorf("查询 Agent Wallet 失败: %w", err)
 		}
-		return "", fmt.Errorf("查询 Agent Wallet 失败: %w", err)
+
+		// 获取加密管理器
+		em, err := GetEncryptionManager()
+		if err != nil {
+			return "", fmt.Errorf("获取加密管理器失败: %w", err)
+		}
+
+		// 解密私钥
+		privateKeyHex, err := em.DecryptFromDatabase(encryptedPrivateKey)
+		if err != nil {
+			return "", fmt.Errorf("解密私钥失败: %w", err)
+		}
+
+		// 清理并验证私钥
+		cleanedKey := cleanAndValidatePrivateKey(privateKeyHex)
+		if len(cleanedKey) != 64 || !isHexString(cleanedKey) {
+			return "", fmt.Errorf("私钥格式无效: 期望 64 个十六进制字符，实际长度: %d", len(cleanedKey))
+		}
+		return cleanedKey, nil
 	}
 
-	// 获取加密管理器
-	em, err := GetEncryptionManager()
-	if err != nil {
-		return "", fmt.Errorf("获取加密管理器失败: %w", err)
+	// 情况2: 加密格式 (ENC:v1:...)
+	if strings.HasPrefix(apiKey, "ENC:v1:") {
+		// 获取加密管理器
+		em, err := GetEncryptionManager()
+		if err != nil {
+			return "", fmt.Errorf("获取加密管理器失败: %w", err)
+		}
+
+		// 尝试解密
+		decryptedKey, decryptErr := em.DecryptFromDatabase(apiKey)
+		if decryptErr != nil {
+			return "", fmt.Errorf("解密私钥失败: %w", decryptErr)
+		}
+
+		// 清理并验证私钥
+		cleanedKey := cleanAndValidatePrivateKey(decryptedKey)
+		if len(cleanedKey) != 64 || !isHexString(cleanedKey) {
+			return "", fmt.Errorf("解密后的私钥格式无效: 期望 64 个十六进制字符，实际长度: %d", len(cleanedKey))
+		}
+		return cleanedKey, nil
 	}
 
-	// 解密私钥
-	privateKeyHex, err := em.DecryptFromDatabase(encryptedPrivateKey)
-	if err != nil {
-		return "", fmt.Errorf("解密私钥失败: %w", err)
+	// 情况3: 原始十六进制字符串
+	cleanedKey := cleanAndValidatePrivateKey(apiKey)
+	if len(cleanedKey) != 64 || !isHexString(cleanedKey) {
+		previewLen := 10
+		if len(apiKey) < previewLen {
+			previewLen = len(apiKey)
+		}
+		return "", fmt.Errorf("私钥格式无效: 期望 64 个十六进制字符，或 BACKEND_AGENT: 格式，或有效的加密格式。实际长度: %d, 前10字符: %s", len(apiKey), apiKey[:previewLen])
 	}
+	return cleanedKey, nil
+}
 
-	return privateKeyHex, nil
+// cleanAndValidatePrivateKey 清理私钥字符串（去除空白字符和0x前缀）
+func cleanAndValidatePrivateKey(key string) string {
+	cleanedKey := strings.TrimSpace(key)
+	cleanedKey = strings.TrimPrefix(strings.ToLower(cleanedKey), "0x")
+	cleanedKey = strings.ReplaceAll(cleanedKey, " ", "")
+	cleanedKey = strings.ReplaceAll(cleanedKey, "\n", "")
+	cleanedKey = strings.ReplaceAll(cleanedKey, "\r", "")
+	cleanedKey = strings.ReplaceAll(cleanedKey, "\t", "")
+	return cleanedKey
+}
+
+// isHexString 检查字符串是否为有效的十六进制字符串
+func isHexString(s string) bool {
+	for _, c := range s {
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+			return false
+		}
+	}
+	return true
 }
