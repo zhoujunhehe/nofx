@@ -144,7 +144,8 @@ ON CONFLICT (id) DO NOTHING;
 -- 初始化AI模型（使用default用户）
 INSERT INTO ai_models (id, user_id, name, provider, enabled) VALUES
 ('deepseek', 'default', 'DeepSeek', 'deepseek', FALSE),
-('qwen', 'default', 'Qwen', 'qwen', FALSE)
+('qwen', 'default', 'Qwen', 'qwen', FALSE),
+('gemini3', 'default', 'Gemini 3', 'gemini', FALSE)
 ON CONFLICT (id) DO NOTHING;
 
 -- 初始化交易所（使用default用户）

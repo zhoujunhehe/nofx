@@ -1045,6 +1045,7 @@ func (d *PostgreSQLDatabase) initDefaultData() error {
 	}{
 		{"deepseek", "DeepSeek", "deepseek"},
 		{"qwen", "Qwen", "qwen"},
+		{"gemini3", "Gemini 3", "gemini"},
 	}
 
 	for _, model := range aiModels {

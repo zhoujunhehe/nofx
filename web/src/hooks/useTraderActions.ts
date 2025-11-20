@@ -302,15 +302,30 @@ export function useTraderActions({
         ) || []
 
       const request = config.buildRequest(updatedItems)
-      await toast.promise(config.updateApi(request), {
-        loading: '正在更新配置…',
-        success: '配置已更新',
-        error: '更新配置失败',
-      })
 
-      // 重新获取用户配置以确保数据同步
-      const refreshedItems = await config.refreshApi()
-      config.setItems(refreshedItems)
+      // 使用 toast.promise 来显示持续的加载状态
+      await toast.promise(
+        (async () => {
+          // 先执行删除 API
+          await config.updateApi(request)
+
+          // 等待数据库事务提交完成 (2秒)
+          console.log('⏳ Waiting 2000ms for database transaction to commit...')
+          await new Promise(resolve => setTimeout(resolve, 2000))
+
+          // 重新获取用户配置以确保数据同步
+          console.log(`🔄 Reloading ${config.type} configs...`)
+          const refreshedItems = await config.refreshApi()
+          config.setItems(refreshedItems)
+
+          return refreshedItems
+        })(),
+        {
+          loading: '正在删除配置并刷新列表…',
+          success: '配置已删除',
+          error: '删除配置失败',
+        }
+      )
 
       config.closeModal()
     } catch (error) {
@@ -421,15 +436,29 @@ export function useTraderActions({
         ),
       }
 
-      await toast.promise(api.updateModelConfigs(request), {
-        loading: '正在更新模型配置…',
-        success: '模型配置已更新',
-        error: '更新模型配置失败',
-      })
+      // 使用 toast.promise 来显示持续的加载状态
+      await toast.promise(
+        (async () => {
+          // 先执行保存 API
+          await api.updateModelConfigs(request)
 
-      // 重新获取用户配置以确保数据同步
-      const refreshedModels = await api.getModelConfigs()
-      setAllModels(refreshedModels)
+          // 等待数据库事务提交完成 (2秒)
+          console.log('⏳ Waiting 2000ms for database transaction to commit...')
+          await new Promise(resolve => setTimeout(resolve, 2000))
+
+          // 重新获取用户配置以确保数据同步
+          console.log('🔄 Reloading model configs...')
+          const refreshedModels = await api.getModelConfigs()
+          setAllModels(refreshedModels)
+
+          return refreshedModels
+        })(),
+        {
+          loading: '正在保存模型配置并刷新列表…',
+          success: '模型配置已保存',
+          error: '保存模型配置失败',
+        }
+      )
 
       setShowModelModal(false)
       setEditingModel(null)
@@ -565,15 +594,29 @@ export function useTraderActions({
         ),
       }
 
-      await toast.promise(api.updateExchangeConfigsEncrypted(request), {
-        loading: '正在更新交易所配置…',
-        success: '交易所配置已更新',
-        error: '更新交易所配置失败',
-      })
+      // 使用 toast.promise 来显示持续的加载状态
+      await toast.promise(
+        (async () => {
+          // 先执行保存 API
+          await api.updateExchangeConfigsEncrypted(request)
 
-      // 重新获取用户配置以确保数据同步
-      const refreshedExchanges = await api.getExchangeConfigs()
-      setAllExchanges(refreshedExchanges)
+          // 等待数据库事务提交完成 (2秒)
+          console.log('⏳ Waiting 2000ms for database transaction to commit...')
+          await new Promise(resolve => setTimeout(resolve, 2000))
+
+          // 重新获取用户配置以确保数据同步
+          console.log('🔄 Reloading exchange configs...')
+          const refreshedExchanges = await api.getExchangeConfigs()
+          setAllExchanges(refreshedExchanges)
+
+          return refreshedExchanges
+        })(),
+        {
+          loading: '正在保存交易所配置并刷新列表…',
+          success: '交易所配置已保存',
+          error: '保存交易所配置失败',
+        }
+      )
 
       setShowExchangeModal(false)
       setEditingExchange(null)
