@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"nofx/config"
-	"nofx/crypto"
 	"nofx/logger"
 	"nofx/trader"
 	"sort"
@@ -13,8 +12,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/jmoiron/sqlx"
 )
 
 // CompetitionCache 竞赛数据缓存
@@ -297,11 +294,7 @@ func (tm *TraderManager) addTraderFromDB(traderCfg *config.TraderRecord, aiModel
 		traderConfig.BinanceSecretKey = exchangeCfg.SecretKey
 	} else if exchangeCfg.ID == "hyperliquid" {
 		// Hyperliquid 私钥（可能是 BACKEND_AGENT: 前缀，将在创建 trader 时解密）
-		privateKey, err := resolveHyperliquidPrivateKey(database, exchangeCfg.APIKey)
-		if err != nil {
-			return fmt.Errorf("解密 Hyperliquid 私钥失败: %w", err)
-		}
-		traderConfig.HyperliquidPrivateKey = privateKey
+		traderConfig.HyperliquidPrivateKey = exchangeCfg.APIKey
 		traderConfig.HyperliquidWalletAddr = exchangeCfg.HyperliquidWalletAddr
 	} else if exchangeCfg.ID == "aster" {
 		traderConfig.AsterUser = exchangeCfg.AsterUser
@@ -410,11 +403,7 @@ func (tm *TraderManager) AddTraderFromDB(traderCfg *config.TraderRecord, aiModel
 		traderConfig.BinanceSecretKey = exchangeCfg.SecretKey
 	} else if exchangeCfg.ID == "hyperliquid" {
 		// Hyperliquid 私钥（可能是 BACKEND_AGENT: 前缀，将在创建 trader 时解密）
-		privateKey, err := resolveHyperliquidPrivateKey(database, exchangeCfg.APIKey)
-		if err != nil {
-			return fmt.Errorf("解密 Hyperliquid 私钥失败: %w", err)
-		}
-		traderConfig.HyperliquidPrivateKey = privateKey
+		traderConfig.HyperliquidPrivateKey = exchangeCfg.APIKey
 		traderConfig.HyperliquidWalletAddr = exchangeCfg.HyperliquidWalletAddr
 	} else if exchangeCfg.ID == "aster" {
 		traderConfig.AsterUser = exchangeCfg.AsterUser
@@ -773,21 +762,6 @@ func containsUserPrefix(traderID string) bool {
 		}
 	}
 	return false
-}
-
-// resolveHyperliquidPrivateKey 统一解析 Hyperliquid 私钥，支持后端托管的 Agent 钱包
-func resolveHyperliquidPrivateKey(database config.DatabaseInterface, apiKey string) (string, error) {
-	if !strings.HasPrefix(apiKey, "BACKEND_AGENT:") {
-		// 手动输入的私钥，直接返回
-		return apiKey, nil
-	}
-
-	db, ok := database.GetDB().(*sqlx.DB)
-	if !ok {
-		return "", fmt.Errorf("底层数据库连接不是 *sqlx.DB，无法解密 Hyperliquid Agent 私钥")
-	}
-
-	return crypto.ResolveHyperliquidPrivateKey(db, apiKey)
 }
 
 // LoadUserTraders 为特定用户加载交易员到内存
@@ -1196,11 +1170,7 @@ func (tm *TraderManager) loadSingleTrader(traderCfg *config.TraderRecord, aiMode
 		traderConfig.BinanceSecretKey = exchangeCfg.SecretKey
 	} else if exchangeCfg.ID == "hyperliquid" {
 		// Hyperliquid 私钥（可能是 BACKEND_AGENT: 前缀，将在创建 trader 时解密）
-		privateKey, err := resolveHyperliquidPrivateKey(database, exchangeCfg.APIKey)
-		if err != nil {
-			return fmt.Errorf("解密 Hyperliquid 私钥失败: %w", err)
-		}
-		traderConfig.HyperliquidPrivateKey = privateKey
+		traderConfig.HyperliquidPrivateKey = exchangeCfg.APIKey
 		traderConfig.HyperliquidWalletAddr = exchangeCfg.HyperliquidWalletAddr
 	} else if exchangeCfg.ID == "aster" {
 		traderConfig.AsterUser = exchangeCfg.AsterUser

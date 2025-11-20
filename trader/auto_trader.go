@@ -223,9 +223,9 @@ func NewAutoTrader(config AutoTraderConfig, database interface{}, userID string)
 		return nil, fmt.Errorf("不支持的交易平台: %s", config.Exchange)
 	}
 
-	// 初始金额可为0：若未填则后续以实时净值为准，仅记录日志
+	// 验证初始金额配置
 	if config.InitialBalance <= 0 {
-		log.Printf("⚠️ [%s] 未设置初始金额 (InitialBalance<=0)，将使用实时账户净值作为后续计算基准", config.Name)
+		return nil, fmt.Errorf("初始金额必须大于0，请在配置中设置InitialBalance")
 	}
 
 	// 初始化决策日志记录器（使用trader ID创建独立目录）
