@@ -355,7 +355,7 @@ func (s *Server) handleAuthorizeAgent(c *gin.Context) {
 	// 构建 ApproveAgent action (flat structure, matching Python SDK)
 	action := map[string]interface{}{
 		"type":             "approveAgent",
-		"signatureChainId": "0x66eee", // Hyperliquid L1 chain ID (matches Python SDK)
+		"signatureChainId": "0xa4b1", // arbitrum one mainnet chain id
 		"hyperliquidChain": wallet.HyperliquidChain,
 		"agentAddress":     wallet.AgentAddress,
 		"nonce":            req.Nonce,
