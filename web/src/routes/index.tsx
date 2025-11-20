@@ -15,11 +15,11 @@ import { AgentWalletBackendPage } from '../pages/AgentWalletBackendPage'
 export const router = createBrowserRouter([
   {
     path: '/',
-    element: <LandingPage />,
+    element: <VergeXLandingPage />,
   },
   {
-    path: '/vergex',
-    element: <VergeXLandingPage />,
+    path: '/old-landing',
+    element: <LandingPage />,
   },
   // Auth routes - using AuthLayout
   {

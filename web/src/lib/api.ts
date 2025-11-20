@@ -32,7 +32,52 @@ function getAuthHeaders(): Record<string, string> {
   return headers
 }
 
+// GitHub Stats interface
+export interface GitHubStats {
+  stars: number
+  forks: number
+  contributors: number
+}
+
+// Fetch GitHub repository stats
+async function fetchGitHubStats(): Promise<GitHubStats> {
+  try {
+    // GitHub API endpoint for repository info
+    const repoResponse = await fetch('https://api.github.com/repos/tinkle-community/nofx')
+    if (!repoResponse.ok) {
+      throw new Error('Failed to fetch GitHub repo stats')
+    }
+    const repoData = await repoResponse.json()
+
+    // GitHub API endpoint for contributors
+    const contributorsResponse = await fetch('https://api.github.com/repos/tinkle-community/nofx/contributors')
+    if (!contributorsResponse.ok) {
+      throw new Error('Failed to fetch GitHub contributors')
+    }
+    const contributorsData = await contributorsResponse.json()
+
+    return {
+      stars: repoData.stargazers_count || 0,
+      forks: repoData.forks_count || 0,
+      contributors: Array.isArray(contributorsData) ? contributorsData.length : 0,
+    }
+  } catch (error) {
+    console.error('Error fetching GitHub stats:', error)
+    // Return fallback values if API fails
+    return {
+      stars: 7859,
+      forks: 1985,
+      contributors: 44,
+    }
+  }
+}
+
 export const api = {
+  // GitHub Stats
+  async getGitHubStats(): Promise<GitHubStats> {
+    return fetchGitHubStats()
+  },
+
   // AI交易员管理接口
   async getTraders(): Promise<TraderInfo[]> {
     const res = await httpClient.get(`${API_BASE}/my-traders`, getAuthHeaders())

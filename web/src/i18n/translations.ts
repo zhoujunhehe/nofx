@@ -503,10 +503,11 @@ export const translations = {
 
     // Hero Section
     githubStarsInDays: '2.5K+ GitHub Stars in 3 days',
-    heroTitle1: 'Read the Market.',
-    heroTitle2: 'Write the Trade.',
+    heroTitle1: 'The ',
+    heroTitle2: 'Agentic',
+    heroTitle3: ' AI Trading Platform',
     heroDescription:
-      'NOFX is the future standard for AI trading — an open, community-driven agentic trading OS. Supporting Binance, Aster DEX and other exchanges, self-hosted, multi-agent competition, let AI automatically make decisions, execute and optimize trades for you.',
+      'NOFX is an agentic AI trading platform that lets large language models manage your positions. On a fixed schedule it reads live market data plus your prompt, decides whether to open, adjust, or close trades, and executes under your risk constraints.',
     poweredBy:
       'Powered by Aster DEX and Binance, strategically invested by Amber.ac.',
 
@@ -847,6 +848,88 @@ export const translations = {
       privatekeyInvalidFormat:
         'Invalid private key format (should be 64 hex characters)',
       privatekeyObfuscationFailed: 'Clipboard obfuscation failed',
+    },
+
+    // VergeX Landing Page
+    vergex: {
+      // Hero Section
+      heroTitle: 'The Agentic AI Trading Platform',
+      heroDescription:
+        'Vergex is an agentic AI trading platform that lets large language models manage your positions. On a fixed schedule it reads live market data plus your prompt, decides whether to open, adjust, or close trades, and executes under your risk constraints.',
+      openApp: 'Open App',
+
+      // Navigation
+      home: 'Home',
+      products: 'Products',
+      resources: 'Resources',
+      company: 'Company',
+      language: 'Language',
+
+      // Why VergeX Section
+      whyVergeX: 'Why VergeX?',
+      securityFirst: 'Security First',
+      securityFirstDesc:
+        'Built on trade-only API permissions with no withdrawal access, keeping your funds safe and fully under your control.',
+      naturalLanguage: 'Natural Language',
+      naturalLanguageDesc:
+        'Describe your trading logic in natual language—no scripting or coding required for the AI to operate.',
+      intelligentBacktest: 'Intelligent Backtest',
+      intelligentBacktestDesc:
+        'Preview how your prompt would behave in past market conditions before committing real capital.',
+      alwaysOnExecution: 'Always-On Execution',
+      alwaysOnExecutionDesc:
+        "VergeX evaluates markets on a fixed schedule and manages positions 24/7 so you don't have to monitor the screen.",
+
+      // Our Products Section
+      ourProducts: 'Our Products',
+      userLayer: 'USER LAYER',
+      userLayerDesc:
+        'Your trading intent, written in natural language. Risk parameters and trade-only API keys stay fully under your control.',
+      vergexAgentic: 'VERGEX AGENTIC',
+      vergexAgenticDesc:
+        'An autonomous decision engine that evaluates markets on a fixed schedule, interprets your prompt, and manages positions within your risk limits.',
+      tradingVenues: 'TRADING VENUES',
+      tradingVenuesDesc:
+        'Connected directly to your existing exchange accounts — Binance, Hyperliquid, Aster, and more.',
+      aiModels: 'AI MODELS',
+      aiModelsDesc:
+        'Powered by leading large language models, including DeepSeek, Qwen, Gemini, GPT, Claude, and other agentic AI systems.',
+
+      // Social Media Section
+      socialMedia: 'Social Media',
+      stars: 'Stars',
+      forks: 'Forks',
+      contributors: 'Contributors',
+      contributeOnGithub: 'Contribute on GitHub',
+      twitter: 'Twitter',
+      telegram: 'Telegram',
+      discord: 'Discord',
+      viewBlog: 'View Blog',
+
+      // Footer
+      productsFooter: 'Products',
+      aiCompetition: 'AI Competition',
+      aiTrader: 'AI Trader',
+      performanceDashboard: 'Performance Dashboard',
+      resourcesFooter: 'Resources',
+      faq: 'FAQ',
+      docs: 'Docs',
+      github: 'Github',
+      security: 'Security',
+      companyFooter: 'Company',
+      about: 'About',
+      contact: 'Contact',
+      privacyPolicy: 'Privacy Policy',
+      termsOfUse: 'Terms of Use',
+      supporters: 'Supporters',
+      amberStrategic: 'Amber.ac (Strategic Investment)',
+      asterDex: 'Aster DEX',
+      hyperliquid: 'Hyperliquid',
+      binance: 'Binance',
+      followUs: 'Follow us',
+      disclaimer:
+        'DISCLAIMER: VergeX does not custody user funds and operates only with trade-only API permissions. Cryptocurrency trading carries risk. Please assess carefully before participating.',
+      copyright: '© 2025 VergeX. All rights reserved.',
     },
   },
   zh: {
@@ -1311,7 +1394,8 @@ export const translations = {
     signIn: '登录',
     signUp: '注册',
     registrationClosed: '注册已关闭',
-    registrationClosedMessage: '平台当前不开放新用户注册，如需访问请联系管理员获取账号。',
+    registrationClosedMessage:
+      '平台当前不开放新用户注册，如需访问请联系管理员获取账号。',
 
     // Hero Section
     githubStarsInDays: '3 天内 2.5K+ GitHub Stars',
@@ -1636,6 +1720,88 @@ export const translations = {
       privatekeyIncomplete: '请输入至少 {expected} 位字符',
       privatekeyInvalidFormat: '私钥格式无效（应为64位十六进制字符）',
       privatekeyObfuscationFailed: '剪贴板混淆失败',
+    },
+
+    // VergeX Landing Page
+    vergex: {
+      // Hero Section
+      heroTitle: 'Agentic AI 交易平台',
+      heroDescription:
+        'NOFX 是一个代理式 AI 交易平台，让大语言模型管理您的仓位。它按固定时间表读取实时市场数据和您的提示词，决定是开仓、调整还是平仓，并在您的风险约束下执行。',
+      openApp: '打开应用',
+
+      // Navigation
+      home: '首页',
+      products: '产品',
+      resources: '资源',
+      company: '公司',
+      language: '语言',
+
+      // Why VergeX Section
+      whyVergeX: '为什么选择 VergeX？',
+      securityFirst: '安全第一',
+      securityFirstDesc:
+        '基于仅交易 API 权限构建，无提现权限，让您的资金安全且完全在您的控制之下。',
+      naturalLanguage: '自然语言',
+      naturalLanguageDesc:
+        '用自然语言描述您的交易逻辑——无需脚本或编码，AI 即可运作。',
+      intelligentBacktest: '智能回测',
+      intelligentBacktestDesc:
+        '在投入真实资金之前，预览您的提示词在过去市场条件下的表现。',
+      alwaysOnExecution: '全天候执行',
+      alwaysOnExecutionDesc:
+        'VergeX 按固定时间表评估市场并全天候管理仓位，让您无需盯盘。',
+
+      // Our Products Section
+      ourProducts: '我们的产品',
+      userLayer: '用户层',
+      userLayerDesc:
+        '您的交易意图，用自然语言书写。风险参数和仅交易 API 密钥完全在您的控制之下。',
+      vergexAgentic: 'VERGEX 代理',
+      vergexAgenticDesc:
+        '一个自主决策引擎，按固定时间表评估市场，解释您的提示词，并在您的风险限制内管理仓位。',
+      tradingVenues: '交易场所',
+      tradingVenuesDesc:
+        '直接连接到您现有的交易所账户——币安、Hyperliquid、Aster 等。',
+      aiModels: 'AI 模型',
+      aiModelsDesc:
+        '由领先的大语言模型驱动，包括 DeepSeek、Qwen、Gemini、GPT、Claude 和其他代理式 AI 系统。',
+
+      // Social Media Section
+      socialMedia: '社交媒体',
+      stars: 'Stars',
+      forks: 'Forks',
+      contributors: '贡献者',
+      contributeOnGithub: '在 GitHub 上贡献',
+      twitter: 'Twitter',
+      telegram: 'Telegram',
+      discord: 'Discord',
+      viewBlog: '查看博客',
+
+      // Footer
+      productsFooter: '产品',
+      aiCompetition: 'AI 竞技场',
+      aiTrader: 'AI 交易员',
+      performanceDashboard: '性能仪表板',
+      resourcesFooter: '资源',
+      faq: '常见问题',
+      docs: '文档',
+      github: 'Github',
+      security: '安全',
+      companyFooter: '公司',
+      about: '关于',
+      contact: '联系',
+      privacyPolicy: '隐私政策',
+      termsOfUse: '使用条款',
+      supporters: '支持者',
+      amberStrategic: 'Amber.ac（战略投资）',
+      asterDex: 'Aster DEX',
+      hyperliquid: 'Hyperliquid',
+      binance: '币安',
+      followUs: '关注我们',
+      disclaimer:
+        '免责声明：VergeX 不托管用户资金，仅使用仅交易 API 权限运作。加密货币交易存在风险。请在参与前仔细评估。',
+      copyright: '© 2025 VergeX. 保留所有权利。',
     },
   },
 }

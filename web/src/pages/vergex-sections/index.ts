@@ -1,0 +1,5 @@
+export { HeroSection } from './HeroSection'
+export { WhyVergeXSection } from './WhyVergeXSection'
+export { OurProductsSection } from './OurProductsSection'
+export { SocialMediaSection } from './SocialMediaSection'
+export { FooterSection } from './FooterSection'

@@ -1,4 +1,6 @@
 import React from 'react'
+import { useLanguage } from '../../contexts/LanguageContext'
+import { t } from '../../i18n/translations'
 
 // SVG Icons matching Figma design
 const GlobeIcon = () => (
@@ -55,14 +57,16 @@ const VergeXLogo = () => (
 
 // Language Selector Component
 const LanguageSelector: React.FC = () => {
-  const [currentLanguage, setCurrentLanguage] = React.useState('English')
+  const { language, setLanguage } = useLanguage()
   const [isOpen, setIsOpen] = React.useState(false)
   const timeoutRef = React.useRef<NodeJS.Timeout | null>(null)
 
   const languages = [
-    { label: 'English', value: 'English' },
-    { label: '简体中文', value: '简体中文' },
+    { label: 'English', value: 'en' as const },
+    { label: '简体中文', value: 'zh' as const },
   ]
+
+  const currentLanguageLabel = language === 'en' ? 'English' : '简体中文'
 
   const handleMouseEnter = () => {
     if (timeoutRef.current) {
@@ -92,23 +96,23 @@ const LanguageSelector: React.FC = () => {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <button className="flex items-center gap-[4px] bg-white/[0.04] hover:bg-white/[0.06] rounded-[24px] pl-[6px] pr-[8px] py-[6px] transition-colors cursor-pointer border-none outline-none">
-        <div className="text-white">
+      <button className="flex items-center gap-[4px] bg-vergex-bg-secondary hover:bg-vergex-bg-tertiary rounded-[24px] pl-[6px] pr-[8px] py-[6px] transition-colors cursor-pointer border-none outline-none">
+        <div className="text-vergex-text-primary">
           <GlobeIcon />
         </div>
-        <span className="font-['Red_Hat_Text',sans-serif] font-medium text-[16px] leading-[24px] text-white">
-          {currentLanguage}
+        <span className="font-vergex-body font-medium text-[16px] leading-[24px] text-vergex-text-primary">
+          {currentLanguageLabel}
         </span>
       </button>
 
       {isOpen && (
         <div
-          className="absolute right-0 top-[calc(100%+16px)] w-[280px] backdrop-blur-[20px] bg-gradient-to-b from-white/[0.06] to-[rgba(153,153,153,0.06)] border border-white/10 rounded-[8px] p-[8px] z-50 flex flex-col gap-[8px]"
+          className="absolute right-0 top-[calc(100%+16px)] w-[280px] backdrop-blur-vergex bg-gradient-to-b from-vergex-gradient-start to-vergex-gradient-end border border-vergex-border-light rounded-[8px] p-[8px] z-50 flex flex-col gap-[8px]"
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
         >
           <div className="flex items-center gap-[6px] p-[8px] rounded-[8px]">
-            <div className="text-[#998cff] w-[20px] h-[20px] flex items-center justify-center">
+            <div className="text-vergex-primary w-[20px] h-[20px] flex items-center justify-center">
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                 <circle
                   cx="10"
@@ -124,28 +128,28 @@ const LanguageSelector: React.FC = () => {
                 />
               </svg>
             </div>
-            <span className="font-['Red_Hat_Text',sans-serif] font-medium text-[14px] leading-[21px] text-[#998cff]">
-              Language
+            <span className="font-vergex-body font-medium text-[14px] leading-[21px] text-vergex-primary">
+              {t('vergex.language', language)}
             </span>
           </div>
 
-          <div className="w-full h-[1px] bg-white/10" />
+          <div className="w-full h-[1px] bg-vergex-border-light" />
 
           {languages.map((lang) => {
-            const active = currentLanguage === lang.value
+            const active = language === lang.value
             return (
               <button
                 key={lang.value}
                 className={`w-full flex items-center justify-between p-[8px] rounded-[6px] cursor-pointer transition-colors border-none outline-none text-left ${
-                  active ? 'bg-white/[0.04]' : 'hover:bg-white/[0.04]'
+                  active ? 'bg-vergex-bg-secondary' : 'hover:bg-vergex-bg-secondary'
                 }`}
-                onClick={() => setCurrentLanguage(lang.value)}
+                onClick={() => setLanguage(lang.value)}
               >
-                <span className="font-['Red_Hat_Text','Noto_Sans_SC',sans-serif] font-medium text-[16px] leading-[24px] text-white">
+                <span className="font-vergex-body font-medium text-[16px] leading-[24px] text-vergex-text-primary">
                   {lang.label}
                 </span>
                 {active && (
-                  <div className="text-white shrink-0">
+                  <div className="text-vergex-text-primary shrink-0">
                     <CheckIcon />
                   </div>
                 )}
@@ -196,8 +200,8 @@ const NavItem: React.FC<NavItemProps> = ({ label, href, active, items }) => {
     return (
       <a
         href={href}
-        className={`font-['Red_Hat_Text',sans-serif] font-normal text-[16px] leading-[24px] transition-colors ${
-          active ? 'text-white' : 'text-white/60 hover:text-white'
+        className={`font-vergex-body font-normal text-[16px] leading-[24px] transition-colors ${
+          active ? 'text-vergex-text-primary' : 'text-vergex-text-primary/60 hover:text-vergex-text-primary'
         }`}
       >
         {label}
@@ -219,8 +223,8 @@ const NavItem: React.FC<NavItemProps> = ({ label, href, active, items }) => {
       onMouseLeave={handleMouseLeave}
     >
       <button
-        className={`font-['Red_Hat_Text',sans-serif] font-normal text-[16px] leading-[24px] transition-colors cursor-pointer bg-transparent border-none outline-none ${
-          isOpen ? 'text-white' : 'text-white/60 hover:text-white'
+        className={`font-vergex-body font-normal text-[16px] leading-[24px] transition-colors cursor-pointer bg-transparent border-none outline-none ${
+          isOpen ? 'text-vergex-text-primary' : 'text-vergex-text-primary/60 hover:text-vergex-text-primary'
         }`}
       >
         {label}
@@ -228,28 +232,28 @@ const NavItem: React.FC<NavItemProps> = ({ label, href, active, items }) => {
 
       {isOpen && (
         <div
-          className={`absolute left-0 top-[calc(100%+12px)] ${getDropdownWidth()} backdrop-blur-[20px] bg-gradient-to-b from-white/[0.06] to-[rgba(153,153,153,0.06)] border border-white/10 rounded-[8px] p-[8px] z-50 flex flex-col gap-[8px]`}
+          className={`absolute left-0 top-[calc(100%+12px)] ${getDropdownWidth()} backdrop-blur-vergex bg-gradient-to-b from-vergex-gradient-start to-vergex-gradient-end border border-vergex-border-light rounded-[8px] p-[8px] z-50 flex flex-col gap-[8px]`}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
         >
           <div className="flex gap-[6px] items-center p-[8px] rounded-[8px]">
-            <p className="font-['Red_Hat_Text',sans-serif] font-medium text-[14px] leading-[21px] text-[#998cff]">
+            <p className="font-vergex-body font-medium text-[14px] leading-[21px] text-vergex-primary">
               {label}
             </p>
           </div>
 
-          <div className="w-full h-[1px] bg-white/10" />
+          <div className="w-full h-[1px] bg-vergex-border-light" />
 
           {items.map((sub) => (
             <a
               key={sub.label}
               href={sub.href}
-              className="flex items-center justify-between p-[8px] rounded-[6px] hover:bg-white/[0.04] transition-colors group cursor-pointer no-underline"
+              className="flex items-center justify-between p-[8px] rounded-[6px] hover:bg-vergex-bg-secondary transition-colors group cursor-pointer no-underline"
             >
-              <span className="font-['Red_Hat_Text',sans-serif] font-medium text-[16px] leading-[24px] text-white">
+              <span className="font-vergex-body font-medium text-[16px] leading-[24px] text-vergex-text-primary">
                 {sub.label}
               </span>
-              <div className="text-white/40 group-hover:text-white transition-colors shrink-0">
+              <div className="text-vergex-text-primary/40 group-hover:text-vergex-text-primary transition-colors shrink-0">
                 <ExternalLinkIcon />
               </div>
             </a>
@@ -262,35 +266,61 @@ const NavItem: React.FC<NavItemProps> = ({ label, href, active, items }) => {
 
 // Main Header Component
 export const VergeXHeader: React.FC = () => {
-  const menuConfig: Record<string, Array<{ label: string; href: string }>> = {
-    Products: [
-      { label: 'AI Competition', href: '/competition' },
-      { label: 'AI Trader', href: '/traders' },
-      { label: 'Performance Dashboard', href: '/dashboard' },
+  const { language } = useLanguage()
+
+  const menuConfig = {
+    products: [
+      { labelKey: 'vergex.aiCompetition', href: '/competition' },
+      { labelKey: 'vergex.aiTrader', href: '/traders' },
+      { labelKey: 'vergex.performanceDashboard', href: '/dashboard' },
     ],
-    Resources: [
-      { label: 'FAQ', href: '/faq' },
-      { label: 'Docs', href: '/docs' },
-      { label: 'Github', href: 'https://github.com' },
-      { label: 'Security', href: '/security' },
+    resources: [
+      { labelKey: 'vergex.faq', href: '/faq' },
+      { labelKey: 'vergex.docs', href: '/docs' },
+      { labelKey: 'vergex.github', href: 'https://github.com' },
+      { labelKey: 'vergex.security', href: '/security' },
     ],
-    Company: [
-      { label: 'About', href: '/about' },
-      { label: 'Contact', href: '/contact' },
-      { label: 'Privacy Policy', href: '/privacy' },
-      { label: 'Terms of Use', href: '/terms' },
+    company: [
+      { labelKey: 'vergex.about', href: '/about' },
+      { labelKey: 'vergex.contact', href: '/contact' },
+      { labelKey: 'vergex.privacyPolicy', href: '/privacy' },
+      { labelKey: 'vergex.termsOfUse', href: '/terms' },
     ],
   }
 
-  const navItems: NavItemProps[] = [
-    { label: 'Home', href: '/', active: true },
-    { label: 'Products', href: '#', items: menuConfig.Products },
-    { label: 'Resources', href: '#', items: menuConfig.Resources },
-    { label: 'Company', href: '#', items: menuConfig.Company },
+  const navItems: (NavItemProps & { labelKey?: string })[] = [
+    { labelKey: 'vergex.home', label: t('vergex.home', language), href: '/', active: true },
+    {
+      labelKey: 'vergex.products',
+      label: t('vergex.products', language),
+      href: '#',
+      items: menuConfig.products.map((item) => ({
+        label: t(item.labelKey, language),
+        href: item.href,
+      })),
+    },
+    {
+      labelKey: 'vergex.resources',
+      label: t('vergex.resources', language),
+      href: '#',
+      items: menuConfig.resources.map((item) => ({
+        label: t(item.labelKey, language),
+        href: item.href,
+      })),
+    },
+    {
+      labelKey: 'vergex.company',
+      label: t('vergex.company', language),
+      href: '#',
+      items: menuConfig.company.map((item) => ({
+        label: t(item.labelKey, language),
+        href: item.href,
+      })),
+    },
   ]
 
   return (
-    <header className="relative h-[80px] w-full bg-white/[0.04]">
+    <header className="relative h-[80px] w-full bg-vergex-bg-secondary">
       <div className="w-[1440px] mx-auto h-full relative">
         {/* Logo */}
         <div className="absolute left-[64px] top-[20px]">

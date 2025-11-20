@@ -2,57 +2,200 @@
 // These are extracted from Figma design
 
 export const SecurityIcon = () => (
-  <svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect width="96" height="96" rx="24" fill="url(#paint0_linear)" fillOpacity="0.1"/>
-    <path d="M48 28L32 36V48C32 58 48 68 48 68C48 68 64 58 64 48V36L48 28Z" stroke="#998cff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M42 48L46 52L54 44" stroke="#998cff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="96"
+    height="96"
+    viewBox="0 0 96 96"
+    fill="none"
+  >
+    <path
+      d="M58.9961 45.7887V39.1887C58.9961 36.2713 57.8371 33.4733 55.7742 31.4106C53.7115 29.3477 50.9135 28.1887 47.9961 28.1887C45.0787 28.1887 42.2807 29.3477 40.218 31.4106C38.1551 33.4733 36.9961 36.2713 36.9961 39.1887V45.7887"
+      stroke="white"
+      strokeWidth="3"
+    />
+    <path
+      d="M32.5996 61.1922C32.5996 62.9425 33.295 64.6213 34.5328 65.859C35.7705 67.0968 37.4493 67.7922 39.1996 67.7922H56.7996C58.5499 67.7922 60.2288 67.0968 61.4665 65.859C62.7042 64.6213 63.3996 62.9425 63.3996 61.1922V47.9922H32.5996V61.1922Z"
+      fill="white"
+      stroke="white"
+      strokeWidth="3"
+    />
+    <path
+      d="M28.1946 80.9899H23.7946C21.4607 80.9899 19.2224 80.0628 17.5721 78.4123C15.9218 76.7621 14.9946 74.5238 14.9946 72.1899V23.7899C14.9946 21.456 15.9218 19.2177 17.5721 17.5673C19.2224 15.917 21.4607 14.9899 23.7946 14.9899H72.1946C74.5286 14.9899 76.7669 15.917 78.4171 17.5673C80.0676 19.2177 80.9946 21.456 80.9946 23.7899V72.1899C80.9946 74.5238 80.0676 76.7621 78.4171 78.4123C76.7669 80.0628 74.5286 80.9899 72.1946 80.9899H67.7946"
+      fill="url(#paint0_linear_1_975)"
+      fillOpacity="0.24"
+    />
+    <path
+      d="M28.1946 80.9899H23.7946C21.4607 80.9899 19.2224 80.0628 17.5721 78.4123C15.9218 76.7621 14.9946 74.5239 14.9946 72.1899V23.7899C14.9946 21.456 15.9218 19.2177 17.5721 17.5673C19.2224 15.917 21.4607 14.9899 23.7946 14.9899H72.1946C74.5286 14.9899 76.7669 15.917 78.4171 17.5673C80.0676 19.2177 80.9946 21.456 80.9946 23.7899V72.1899C80.9946 74.5239 80.0676 76.7621 78.4171 78.4123C76.7669 80.0628 74.5286 80.9899 72.1946 80.9899H67.7946"
+      stroke="white"
+      strokeWidth="3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      opacity="0.4"
+      d="M36.9961 80.9843H58.9961"
+      stroke="white"
+      strokeWidth="3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
     <defs>
-      <linearGradient id="paint0_linear" x1="0" y1="0" x2="96" y2="96" gradientUnits="userSpaceOnUse">
-        <stop stopColor="#998cff"/>
-        <stop offset="1" stopColor="#998cff" stopOpacity="0"/>
+      <linearGradient
+        id="paint0_linear_1_975"
+        x1="47.9946"
+        y1="14.9899"
+        x2="47.9946"
+        y2="80.9899"
+        gradientUnits="userSpaceOnUse"
+      >
+        <stop stopColor="white" stopOpacity="0" />
+        <stop offset="1" stopColor="white" />
       </linearGradient>
     </defs>
   </svg>
 )
 
 export const NaturalLanguageIcon = () => (
-  <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect width="64" height="64" rx="16" fill="url(#paint0_linear_nl)" fillOpacity="0.1"/>
-    <path d="M20 32L24 36L32 28" stroke="#998cff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M44 24H24C21.7909 24 20 25.7909 20 28V44C20 46.2091 21.7909 48 24 48H44C46.2091 48 48 46.2091 48 44V28C48 25.7909 46.2091 24 44 24Z" stroke="#998cff" strokeWidth="2"/>
-    <path d="M28 20V24M40 20V24M20 32H48" stroke="#998cff" strokeWidth="2" strokeLinecap="round"/>
-    <defs>
-      <linearGradient id="paint0_linear_nl" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
-        <stop stopColor="#998cff"/>
-        <stop offset="1" stopColor="#998cff" stopOpacity="0"/>
-      </linearGradient>
-    </defs>
+  <svg
+    width="64"
+    height="64"
+    viewBox="0 0 64 64"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    {/* Background rounded square */}
+    <rect width="64" height="64" rx="16" fill="white" fillOpacity="0.04" />
+    <rect
+      x="0.5"
+      y="0.5"
+      width="63"
+      height="63"
+      rx="15.5"
+      stroke="white"
+      strokeOpacity="0.1"
+    />
+
+    {/* Speech bubble - main circle */}
+    <circle cx="32" cy="28" r="12" stroke="white" strokeWidth="2" />
+
+    {/* Speech bubble - tail pointing down-left */}
+    <path d="M24 36L20 42L26 40" fill="white" />
+
+    {/* Pause icon inside bubble */}
+    <rect x="28" y="24" width="2" height="8" rx="1" fill="white" />
+    <rect x="34" y="24" width="2" height="8" rx="1" fill="white" />
   </svg>
 )
 
 export const IntelligentBacktestIcon = () => (
-  <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect width="64" height="64" rx="16" fill="url(#paint0_linear_ib)" fillOpacity="0.1"/>
-    <path d="M48 32C48 40.8366 40.8366 48 32 48C23.1634 48 16 40.8366 16 32C16 23.1634 23.1634 16 32 16C40.8366 16 48 23.1634 48 32Z" stroke="#998cff" strokeWidth="2"/>
-    <path d="M32 20V32L40 36" stroke="#998cff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    <circle cx="32" cy="32" r="2" fill="#998cff"/>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="64"
+    height="64"
+    viewBox="0 0 64 64"
+    fill="none"
+  >
+    <path
+      d="M31.9953 52.7904C43.4828 52.7904 52.7953 43.4779 52.7953 31.9904C52.7953 20.5029 43.4828 11.1904 31.9953 11.1904C20.5078 11.1904 11.1953 20.5029 11.1953 31.9904C11.1953 43.4779 20.5078 52.7904 31.9953 52.7904Z"
+      fill="url(#paint0_linear_1_1172)"
+      fillOpacity="0.24"
+      stroke="white"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      opacity="0.4"
+      d="M32.1996 29C33.0482 29 33.862 29.3371 34.4621 29.9372C35.0622 30.5373 35.3993 31.3511 35.3993 32.1996C35.3993 33.0482 35.0622 33.862 34.4621 34.4621C33.862 35.0622 33.0482 35.3993 32.1996 35.3993C31.3511 35.3993 30.5373 35.0622 29.9372 34.4621C29.3371 33.862 29 33.0482 29 32.1996C29 31.3511 29.3371 30.5373 29.9372 29.9372C30.5373 29.3371 31.3511 29 32.1996 29Z"
+      fill="#080808"
+      stroke="white"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M32 7.99329C32.8486 7.99329 33.6626 8.33042 34.2627 8.93055C34.8629 9.53066 35.2 10.3446 35.2 11.1933C35.2 12.042 34.8629 12.8559 34.2627 13.456C33.6626 14.0562 32.8486 14.3933 32 14.3933C31.1514 14.3933 30.3374 14.0562 29.7373 13.456C29.1371 12.8559 28.8 12.042 28.8 11.1933C28.8 10.3446 29.1371 9.53066 29.7373 8.93055C30.3374 8.33042 31.1514 7.99329 32 7.99329ZM32 49.5933C32.8486 49.5933 33.6626 49.9304 34.2627 50.5306C34.8629 51.1307 35.2 51.9446 35.2 52.7933C35.2 53.6419 34.8629 54.4559 34.2627 55.056C33.6626 55.6562 32.8486 55.9933 32 55.9933C31.1514 55.9933 30.3374 55.6562 29.7373 55.056C29.1371 54.4559 28.8 53.6419 28.8 52.7933C28.8 51.9446 29.1371 51.1307 29.7373 50.5306C30.3374 49.9304 31.1514 49.5933 32 49.5933ZM52.8 28.7933C53.6486 28.7933 54.4626 29.1304 55.0627 29.7306C55.6629 30.3307 56 31.1446 56 31.9933C56 32.8419 55.6629 33.6558 55.0627 34.256C54.4626 34.8562 53.6486 35.1933 52.8 35.1933C51.9514 35.1933 51.1374 34.8562 50.5373 34.256C49.9371 33.6558 49.6 32.8419 49.6 31.9933C49.6 31.1446 49.9371 30.3307 50.5373 29.7306C51.1374 29.1304 51.9514 28.7933 52.8 28.7933ZM11.2 28.7933C12.0487 28.7933 12.8626 29.1304 13.4627 29.7306C14.0629 30.3307 14.4 31.1446 14.4 31.9933C14.4 32.8419 14.0629 33.6558 13.4627 34.256C12.8626 34.8562 12.0487 35.1933 11.2 35.1933C10.3513 35.1933 9.53738 34.8562 8.93726 34.256C8.33714 33.6558 8 32.8419 8 31.9933C8 31.1446 8.33714 30.3307 8.93726 29.7306C9.53738 29.1304 10.3513 28.7933 11.2 28.7933Z"
+      fill="#080808"
+      stroke="white"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
     <defs>
-      <linearGradient id="paint0_linear_ib" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
-        <stop stopColor="#998cff"/>
-        <stop offset="1" stopColor="#998cff" stopOpacity="0"/>
+      <linearGradient
+        id="paint0_linear_1_1172"
+        x1="31.9953"
+        y1="11.1904"
+        x2="31.9953"
+        y2="52.7904"
+        gradientUnits="userSpaceOnUse"
+      >
+        <stop stopColor="white" stopOpacity="0" />
+        <stop offset="1" stopColor="white" />
       </linearGradient>
     </defs>
   </svg>
 )
 
 export const AlwaysOnIcon = () => (
-  <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect width="64" height="64" rx="16" fill="url(#paint0_linear_ao)" fillOpacity="0.1"/>
-    <path d="M32 16L28 28H36L32 48" stroke="#998cff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="64"
+    height="64"
+    viewBox="0 0 64 64"
+    fill="none"
+  >
+    <path
+      d="M46.7169 17.5928H17.2769C16.0887 17.5928 14.9492 18.0424 14.109 18.8424C13.2689 19.6425 12.7969 20.7278 12.7969 21.8595V46.9261C12.7969 48.0577 13.2689 49.143 14.109 49.9432C14.9492 50.7432 16.0887 51.1928 17.2769 51.1928H46.7169C47.905 51.1928 49.0446 50.7432 49.8847 49.9432C50.7249 49.143 51.1969 48.0577 51.1969 46.9261V21.8595C51.1969 20.7278 50.7249 19.6425 49.8847 18.8424C49.0446 18.0424 47.905 17.5928 46.7169 17.5928Z"
+      fill="url(#paint0_linear_1_1180)"
+      fillOpacity="0.24"
+      stroke="white"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M12.7969 22.3928C12.7969 21.1198 13.2689 19.8989 14.109 18.9987C14.9492 18.0985 16.0887 17.5928 17.2769 17.5928H46.7169C47.905 17.5928 49.0446 18.0985 49.8847 18.9987C50.7249 19.8989 51.1969 21.1198 51.1969 22.3928V23.9928H12.7969V22.3928Z"
+      fill="white"
+      fillOpacity="0.4"
+      stroke="white"
+      strokeWidth="2"
+    />
+    <path
+      d="M19.1953 12.7965V17.5965M44.7953 12.7965V17.5965"
+      stroke="white"
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+    <path
+      d="M20.7969 33.5965V30.3965H23.9969V33.5965H20.7969ZM20.7969 43.1965V39.9965H23.9969V43.1965H20.7969ZM30.3969 33.5965V30.3965H33.5969V33.5965H30.3969ZM30.3969 43.1965V39.9965H33.5969V43.1965H30.3969Z"
+      fill="white"
+      stroke="white"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      opacity="0.4"
+      d="M40 33.5965V30.3965H43.2V33.5965H40Z"
+      fill="white"
+      stroke="white"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
     <defs>
-      <linearGradient id="paint0_linear_ao" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
-        <stop stopColor="#998cff"/>
-        <stop offset="1" stopColor="#998cff" stopOpacity="0"/>
+      <linearGradient
+        id="paint0_linear_1_1180"
+        x1="35.1969"
+        y1="17.5928"
+        x2="35.1969"
+        y2="55.9928"
+        gradientUnits="userSpaceOnUse"
+      >
+        <stop stopColor="white" stopOpacity="0" />
+        <stop offset="1" stopColor="white" />
       </linearGradient>
     </defs>
   </svg>
