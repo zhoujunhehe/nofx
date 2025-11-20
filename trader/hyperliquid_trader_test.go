@@ -295,7 +295,7 @@ func TestNewHyperliquidTrader(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			trader, err := NewHyperliquidTrader(tt.privateKeyHex, tt.walletAddr, tt.testnet)
+			trader, err := NewHyperliquidTrader(tt.privateKeyHex, tt.walletAddr, tt.testnet, "", 0)
 
 			if tt.wantError {
 				assert.Error(t, err)

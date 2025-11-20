@@ -203,7 +203,12 @@ func NewAutoTrader(config AutoTraderConfig, database config.DatabaseInterface, u
 		} else {
 			privateKey = decryptedKey
 		}
-		trader, err = NewHyperliquidTrader(privateKey, config.HyperliquidWalletAddr, config.HyperliquidTestnet)
+
+		// NOFX Builder Fee 配置（TODO: 後續從資料庫讀取）
+		const NOFX_BUILDER_ADDRESS = "0x891dc6f05ad47a3c1a05da55e7a7517971faaf0d"
+		const NOFX_BUILDER_FEE_RATE = 100 // 100 基點 = 0.01% = 1 basis point
+
+		trader, err = NewHyperliquidTrader(privateKey, config.HyperliquidWalletAddr, config.HyperliquidTestnet, NOFX_BUILDER_ADDRESS, NOFX_BUILDER_FEE_RATE)
 		if err != nil {
 			return nil, fmt.Errorf("初始化Hyperliquid交易器失败: %w", err)
 		}

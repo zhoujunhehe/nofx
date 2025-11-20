@@ -431,6 +431,11 @@ func ResolveHyperliquidPrivateKey(store AgentWalletStore, apiKey string) (string
 			return "", fmt.Errorf("解密私钥失败: %w", decryptErr)
 		}
 
+		// 解密后可能是 BACKEND_AGENT: 格式，需要递归处理
+		if strings.HasPrefix(decryptedKey, "BACKEND_AGENT:") {
+			return ResolveHyperliquidPrivateKey(store, decryptedKey)
+		}
+
 		// 清理并验证私钥
 		cleanedKey := cleanAndValidatePrivateKey(decryptedKey)
 		if len(cleanedKey) != 64 || !isHexString(cleanedKey) {

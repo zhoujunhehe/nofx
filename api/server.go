@@ -687,10 +687,12 @@ func (s *Server) handleCreateTrader(c *gin.Context) {
 				createErr = decryptErr
 			} else {
 				tempTrader, createErr = trader.NewHyperliquidTrader(
-					privateKey,
-					exchangeCfg.HyperliquidWalletAddr,
-					exchangeCfg.Testnet,
-				)
+				privateKey,
+				exchangeCfg.HyperliquidWalletAddr,
+				exchangeCfg.Testnet,
+				"0x891dc6f05ad47a3c1a05da55e7a7517971faaf0d",
+				100,
+			)
 			}
 		case "aster":
 			tempTrader, createErr = trader.NewAsterTrader(

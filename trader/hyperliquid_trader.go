@@ -22,10 +22,12 @@ type HyperliquidTrader struct {
 	meta          *hyperliquid.Meta // 缓存meta信息（包含精度等）
 	metaMutex     sync.RWMutex      // 保护meta字段的并发访问
 	isCrossMargin bool              // 是否为全仓模式
+	builderInfo   *hyperliquid.BuilderInfo // Builder Fee 配置（可选）
 }
 
 // NewHyperliquidTrader 创建Hyperliquid交易器
-func NewHyperliquidTrader(privateKeyHex string, walletAddr string, testnet bool) (*HyperliquidTrader, error) {
+// builderAddress 和 builderFeeRate 为可选参数，如果提供则启用 Builder Fee
+func NewHyperliquidTrader(privateKeyHex string, walletAddr string, testnet bool, builderAddress string, builderFeeRate int) (*HyperliquidTrader, error) {
 	// 去掉私钥的 0x 前缀（如果有，不区分大小写）
 	privateKeyHex = strings.TrimPrefix(strings.ToLower(privateKeyHex), "0x")
 
@@ -120,12 +122,23 @@ func NewHyperliquidTrader(privateKeyHex string, walletAddr string, testnet bool)
 		}
 	}
 
+	// 初始化 Builder Fee（如果提供了参数）
+	var builderInfo *hyperliquid.BuilderInfo
+	if builderAddress != "" && builderFeeRate > 0 {
+		builderInfo = &hyperliquid.BuilderInfo{
+			Builder: builderAddress,
+			Fee:     builderFeeRate,
+		}
+		logger.Infof("✓ Builder Fee 已啓用: %s (费率: %d 基点 = %.2f%%)", builderAddress, builderFeeRate, float64(builderFeeRate)/10000*100)
+	}
+
 	return &HyperliquidTrader{
 		exchange:      exchange,
 		ctx:           ctx,
 		walletAddr:    walletAddr,
 		meta:          meta,
 		isCrossMargin: true, // 默认使用全仓模式
+		builderInfo:   builderInfo,
 	}, nil
 }
 
@@ -414,7 +427,7 @@ func (t *HyperliquidTrader) OpenLong(symbol string, quantity float64, leverage i
 		ReduceOnly: false,
 	}
 
-	_, err = t.exchange.Order(t.ctx, order, nil)
+	_, err = t.exchange.Order(t.ctx, order, t.builderInfo)
 	if err != nil {
 		return nil, fmt.Errorf("开多仓失败: %w", err)
 	}
@@ -472,7 +485,7 @@ func (t *HyperliquidTrader) OpenShort(symbol string, quantity float64, leverage 
 		ReduceOnly: false,
 	}
 
-	_, err = t.exchange.Order(t.ctx, order, nil)
+	_, err = t.exchange.Order(t.ctx, order, t.builderInfo)
 	if err != nil {
 		return nil, fmt.Errorf("开空仓失败: %w", err)
 	}
@@ -539,7 +552,7 @@ func (t *HyperliquidTrader) CloseLong(symbol string, quantity float64) (map[stri
 		ReduceOnly: true, // 只平仓，不开新仓
 	}
 
-	_, err = t.exchange.Order(t.ctx, order, nil)
+	_, err = t.exchange.Order(t.ctx, order, t.builderInfo)
 	if err != nil {
 		return nil, fmt.Errorf("平多仓失败: %w", err)
 	}
@@ -611,7 +624,7 @@ func (t *HyperliquidTrader) CloseShort(symbol string, quantity float64) (map[str
 		ReduceOnly: true,
 	}
 
-	_, err = t.exchange.Order(t.ctx, order, nil)
+	_, err = t.exchange.Order(t.ctx, order, t.builderInfo)
 	if err != nil {
 		return nil, fmt.Errorf("平空仓失败: %w", err)
 	}
@@ -755,7 +768,7 @@ func (t *HyperliquidTrader) SetStopLoss(symbol string, positionSide string, quan
 		ReduceOnly: true,
 	}
 
-	_, err := t.exchange.Order(t.ctx, order, nil)
+	_, err := t.exchange.Order(t.ctx, order, t.builderInfo)
 	if err != nil {
 		return fmt.Errorf("设置止损失败: %w", err)
 	}
@@ -792,7 +805,7 @@ func (t *HyperliquidTrader) SetTakeProfit(symbol string, positionSide string, qu
 		ReduceOnly: true,
 	}
 
-	_, err := t.exchange.Order(t.ctx, order, nil)
+	_, err := t.exchange.Order(t.ctx, order, t.builderInfo)
 	if err != nil {
 		return fmt.Errorf("设置止盈失败: %w", err)
 	}
