@@ -168,3 +168,30 @@ export async function confirmBuilderFee(
 
   return await response.json()
 }
+
+export interface VerifyAuthorizationResponse {
+  success: boolean
+  message?: string
+  authorized: boolean
+  builder_authorized: boolean
+  checked_at: string
+}
+
+/**
+ * 验证 Agent Wallet 在 Hyperliquid 上的授权状态
+ */
+export async function verifyAgentAuthorization(
+  mainWallet: string
+): Promise<VerifyAuthorizationResponse> {
+  const response = await httpClient.get(
+    `${API_BASE}/agent/verify-authorization?main_wallet=${mainWallet.toLowerCase()}`,
+    getAuthHeaders()
+  )
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error(errorData.message || `HTTP ${response.status}`)
+  }
+
+  return await response.json()
+}

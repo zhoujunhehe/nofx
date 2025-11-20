@@ -151,6 +151,7 @@ func (s *Server) setupRoutes() {
 			protected.GET("/agent/status", s.handleGetAgentWallet)
 			protected.POST("/agent/authorize", s.handleAuthorizeAgent)
 			protected.POST("/agent/confirm-builder-fee", s.handleConfirmBuilderFee)
+			protected.GET("/agent/verify-authorization", s.handleVerifyAgentAuthorization)
 
 			// 指定trader的数据（使用query参数 ?trader_id=xxx）
 			protected.GET("/status", s.handleStatus)

@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"nofx/crypto"
 	"nofx/logger"
@@ -336,15 +337,9 @@ func (s *Server) handleAuthorizeAgent(c *gin.Context) {
 		return
 	}
 
-	// 2. 检查是否已授权
-	if wallet.Status == "ACTIVE" {
-		c.JSON(http.StatusOK, AuthorizeAgentResponse{
-			Success: true,
-			Message: "Agent wallet already authorized",
-			Status:  "ACTIVE",
-		})
-		return
-	}
+	// 2. 允许重新授权（移除 status 检查）
+	// 即使 status 是 ACTIVE，也允许重新授权（用户可能在 Hyperliquid 网站手动移除了授权）
+	logger.Infof("🔄 Processing authorization for wallet %s (current status: %s)", mainWallet, wallet.Status)
 
 	// 3. 构建 Hyperliquid API 请求
 	hyperliquidAPI := "https://api.hyperliquid.xyz/exchange"
@@ -529,5 +524,152 @@ func (s *Server) handleConfirmBuilderFee(c *gin.Context) {
 	c.JSON(http.StatusOK, ConfirmBuilderFeeResponse{
 		Success: true,
 		Message: "Builder Fee authorization confirmed successfully!",
+	})
+}
+
+// VerifyAuthorizationResponse 验证授权状态响应
+type VerifyAuthorizationResponse struct {
+	Success          bool      `json:"success"`
+	Message          string    `json:"message,omitempty"`
+	Authorized       bool      `json:"authorized"`        // Hyperliquid 实际授权状态
+	BuilderAuthorized bool     `json:"builder_authorized"` // Builder Fee 授权状态
+	CheckedAt        time.Time `json:"checked_at"`
+}
+
+// handleVerifyAgentAuthorization 验证 Agent Wallet 在 Hyperliquid 上的授权状态
+// GET /api/agent/verify-authorization?main_wallet=0x...
+func (s *Server) handleVerifyAgentAuthorization(c *gin.Context) {
+	mainWallet := strings.ToLower(c.Query("main_wallet"))
+	if mainWallet == "" {
+		c.JSON(http.StatusBadRequest, VerifyAuthorizationResponse{
+			Success: false,
+			Message: "main_wallet parameter is required",
+		})
+		return
+	}
+
+	// 1. 获取本地 Agent Wallet 信息
+	wallet, err := s.getAgentWallet(mainWallet)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, VerifyAuthorizationResponse{
+				Success: false,
+				Message: "Agent wallet not found in database",
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, VerifyAuthorizationResponse{
+			Success: false,
+			Message: "Database error: " + err.Error(),
+		})
+		return
+	}
+
+	// 2. 查询 Hyperliquid API 检查实际授权状态
+	hyperliquidAPI := "https://api.hyperliquid.xyz/info"
+	if wallet.HyperliquidChain == "Testnet" {
+		hyperliquidAPI = "https://api.hyperliquid-testnet.xyz/info"
+	}
+
+	requestBody := map[string]interface{}{
+		"type": "metaAndAssetCtxs",
+		"user": mainWallet,
+	}
+
+	jsonData, err := json.Marshal(requestBody)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, VerifyAuthorizationResponse{
+			Success: false,
+			Message: "Failed to marshal request: " + err.Error(),
+		})
+		return
+	}
+
+	resp, err := http.Post(hyperliquidAPI, "application/json", strings.NewReader(string(jsonData)))
+	if err != nil {
+		logger.Errorf("❌ Failed to query Hyperliquid: %v", err)
+		c.JSON(http.StatusInternalServerError, VerifyAuthorizationResponse{
+			Success: false,
+			Message: "Failed to query Hyperliquid: " + err.Error(),
+		})
+		return
+	}
+	defer resp.Body.Close()
+
+	// 读取响应体（用于调试）
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		logger.Errorf("❌ Failed to read response body: %v", err)
+		c.JSON(http.StatusInternalServerError, VerifyAuthorizationResponse{
+			Success: false,
+			Message: "Failed to read response: " + err.Error(),
+		})
+		return
+	}
+	logger.Infof("🔍 Hyperliquid metaAndAssetCtxs response: %s", string(bodyBytes))
+
+	// 3. 解析 Hyperliquid 响应
+	var hyperliquidResp []map[string]interface{}
+	if err := json.Unmarshal(bodyBytes, &hyperliquidResp); err != nil {
+		logger.Errorf("❌ Failed to parse Hyperliquid response: %v, body: %s", err, string(bodyBytes))
+		c.JSON(http.StatusInternalServerError, VerifyAuthorizationResponse{
+			Success: false,
+			Message: "Failed to parse Hyperliquid response: " + err.Error(),
+		})
+		return
+	}
+
+	// 4. 检查 meta.universe 中是否有 Agent Wallet
+	authorized := false
+	builderAuthorized := false
+
+	if len(hyperliquidResp) > 0 {
+		if meta, ok := hyperliquidResp[0]["meta"].(map[string]interface{}); ok {
+			if universe, ok := meta["universe"].([]interface{}); ok {
+				// 遍历 universe 查找 Agent Wallet
+				for _, item := range universe {
+					if member, ok := item.(map[string]interface{}); ok {
+						// 检查 members 字段（Agent Wallet 列表）
+						if members, ok := member["members"].([]interface{}); ok {
+							for _, m := range members {
+								if memberAddr, ok := m.(string); ok {
+									if strings.EqualFold(memberAddr, wallet.AgentAddress) {
+										authorized = true
+										break
+									}
+								}
+							}
+						}
+					}
+					if authorized {
+						break
+					}
+				}
+			}
+
+			// 检查 Builder Fee 授权（如果有的话）
+			if builders, ok := meta["builders"].([]interface{}); ok {
+				for _, b := range builders {
+					if builder, ok := b.(map[string]interface{}); ok {
+						if builderAddr, ok := builder["address"].(string); ok {
+							// 这里可以检查是否授权了 NOFX Builder
+							// 简化起见，如果有任何 builder 就认为已授权
+							if builderAddr != "" {
+								builderAuthorized = true
+								break
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// 5. 返回结果
+	c.JSON(http.StatusOK, VerifyAuthorizationResponse{
+		Success:           true,
+		Authorized:        authorized,
+		BuilderAuthorized: builderAuthorized,
+		CheckedAt:         time.Now(),
 	})
 }

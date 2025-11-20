@@ -546,11 +546,10 @@ func TestUpdateExchange_AllSensitiveFieldsUpdate(t *testing.T) {
 }
 
 // setupTestDB 创建测试数据库
-func setupTestDB(t *testing.T) (*Database, func()) {
-	// 创建临时数据库文件
-	tmpFile := t.TempDir() + "/test.db"
-
-	db, err := NewDatabase(tmpFile)
+// 返回 *PostgreSQLDatabase 以便测试代码可以直接调用多参数方法
+func setupTestDB(t *testing.T) (*PostgreSQLDatabase, func()) {
+	// 使用 PostgreSQL 测试数据库
+	db, err := NewPostgreSQLDatabase()
 	if err != nil {
 		t.Fatalf("创建测试数据库失败: %v", err)
 	}
@@ -581,7 +580,6 @@ func setupTestDB(t *testing.T) (*Database, func()) {
 
 	cleanup := func() {
 		db.Close()
-		os.RemoveAll(tmpFile)
 		os.RemoveAll(rsaKeyPath)
 	}
 
@@ -594,17 +592,9 @@ func TestWALModeEnabled(t *testing.T) {
 	db, cleanup := setupTestDB(t)
 	defer cleanup()
 
-	// 查询当前的 journal_mode
-	var journalMode string
-	err := db.db.QueryRow("PRAGMA journal_mode").Scan(&journalMode)
-	if err != nil {
-		t.Fatalf("查询 journal_mode 失败: %v", err)
-	}
-
-	// 期望是 WAL 模式
-	if journalMode != "wal" {
-		t.Errorf("期望 journal_mode=wal，实际是 %s", journalMode)
-	}
+	// PostgreSQL 不使用 SQLite 的 journal_mode
+	// 跳过此测试或使用 PostgreSQL 相关的检查
+	t.Skip("PostgreSQL 不使用 SQLite 的 journal_mode，跳过测试")
 }
 
 // TestSynchronousMode 测试 synchronous 模式设置
@@ -613,17 +603,9 @@ func TestSynchronousMode(t *testing.T) {
 	db, cleanup := setupTestDB(t)
 	defer cleanup()
 
-	// 查询 synchronous 设置
-	var synchronous int
-	err := db.db.QueryRow("PRAGMA synchronous").Scan(&synchronous)
-	if err != nil {
-		t.Fatalf("查询 synchronous 失败: %v", err)
-	}
-
-	// 期望是 FULL (2) 以确保数据持久性
-	if synchronous != 2 {
-		t.Errorf("期望 synchronous=2 (FULL)，实际是 %d", synchronous)
-	}
+	// PostgreSQL 不使用 SQLite 的 PRAGMA synchronous
+	// 跳过此测试或使用 PostgreSQL 相关的检查
+	t.Skip("PostgreSQL 不使用 SQLite 的 PRAGMA synchronous，跳过测试")
 }
 
 // TestDataPersistenceAcrossReopen 测试数据在数据库关闭并重新打开后是否持久化

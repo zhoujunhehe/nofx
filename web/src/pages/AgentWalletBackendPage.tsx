@@ -24,6 +24,7 @@ import {
   getAgentWallet,
   authorizeAgent,
   confirmBuilderFee,
+  verifyAgentAuthorization,
   type AgentWallet,
 } from '../lib/agentWalletBackend'
 import { signApproveAgent } from '../lib/hyperliquidApproveAgent'
@@ -45,6 +46,19 @@ export function AgentWalletBackendPage() {
   const [agentWallet, setAgentWallet] = useState<AgentWallet | null>(null)
   const [hyperliquidBalance, setHyperliquidBalance] = useState<number | null>(null)
   const [balanceLoading, setBalanceLoading] = useState(false)
+
+  // 授权状态验证
+  const [authVerification, setAuthVerification] = useState<{
+    authorized: boolean | null
+    builderAuthorized: boolean | null
+    checkedAt: Date | null
+    checking: boolean
+  }>({
+    authorized: null,
+    builderAuthorized: null,
+    checkedAt: null,
+    checking: false,
+  })
 
   // 查询现有的 Agent 钱包
   useEffect(() => {
@@ -116,6 +130,37 @@ export function AgentWalletBackendPage() {
       setLoading(false)
     }
   }
+
+  // 验证 Agent Wallet 授权状态
+  const verifyAuthorization = async () => {
+    if (!address || !agentWallet) return
+
+    setAuthVerification(prev => ({ ...prev, checking: true }))
+    try {
+      const result = await verifyAgentAuthorization(address)
+      setAuthVerification({
+        authorized: result.authorized,
+        builderAuthorized: result.builder_authorized,
+        checkedAt: new Date(result.checked_at),
+        checking: false,
+      })
+      console.log('✅ Authorization verification completed:', {
+        authorized: result.authorized,
+        builderAuthorized: result.builder_authorized,
+      })
+    } catch (error) {
+      console.error('Failed to verify authorization:', error)
+      setAuthVerification(prev => ({ ...prev, checking: false }))
+    }
+  }
+
+  // 自动检测授权状态（当 Agent Wallet 为 ACTIVE 时）
+  useEffect(() => {
+    if (agentWallet && agentWallet.status === 'ACTIVE') {
+      console.log('🔍 Auto-verifying authorization for ACTIVE wallet...')
+      verifyAuthorization()
+    }
+  }, [agentWallet])
 
   const handleCreateAgent = async () => {
     if (!address || !isConnected) {
@@ -353,6 +398,42 @@ export function AgentWalletBackendPage() {
               </button>
             </div>
 
+            {/* 授权状态不同步警告 */}
+            {agentWallet.status === 'ACTIVE' &&
+             authVerification.authorized === false && (
+              <div
+                className="rounded-lg p-4 mb-4 mt-4"
+                style={{
+                  background: 'rgba(240, 185, 11, 0.1)',
+                  border: '1px solid rgba(240, 185, 11, 0.3)',
+                }}
+              >
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 flex-shrink-0" style={{ color: '#F0B90B' }} />
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold mb-2" style={{ color: '#F0B90B' }}>
+                      ⚠️ {language === 'zh' ? '授權狀態不同步' : 'Authorization Out of Sync'}
+                    </p>
+                    <p className="text-sm mb-2" style={{ color: '#848E9C' }}>
+                      {language === 'zh'
+                        ? '本地資料庫顯示已授權，但 Hyperliquid 上未找到此 Agent Wallet 的授權記錄。'
+                        : 'Local database shows authorized, but Hyperliquid has no authorization record for this Agent Wallet.'}
+                    </p>
+                    <p className="text-sm" style={{ color: '#848E9C' }}>
+                      {language === 'zh'
+                        ? '可能原因：您在 Hyperliquid 介面手動移除了授權。'
+                        : 'Possible reason: You manually removed the authorization on Hyperliquid website.'}
+                    </p>
+                    <p className="text-sm mt-2" style={{ color: '#F0B90B' }}>
+                      {language === 'zh'
+                        ? '請點擊下方「重新授權」按鈕修復此問題。'
+                        : 'Please click the "Re-authorize" button below to fix this issue.'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-3">
               <div>
                 <span className="text-sm" style={{ color: '#848E9C' }}>
@@ -568,6 +649,94 @@ export function AgentWalletBackendPage() {
                       </>
                     )}
                   </button>
+                </div>
+              )}
+
+              {/* 重新授权按钮组（即使 status=ACTIVE 也显示） */}
+              {agentWallet.status === 'ACTIVE' && (
+                <div
+                  className="mt-4 pt-4"
+                  style={{ borderTop: '1px solid #2b3139' }}
+                >
+                  <div className="flex flex-wrap gap-3">
+                    {/* 检查授权状态按钮 */}
+                    <button
+                      onClick={verifyAuthorization}
+                      disabled={authVerification.checking}
+                      className="flex items-center gap-2 px-4 py-2 rounded transition-colors text-sm font-medium disabled:opacity-50"
+                      style={{
+                        background: 'rgba(96, 165, 250, 0.1)',
+                        border: '1px solid rgba(96, 165, 250, 0.3)',
+                        color: '#60a5fa',
+                      }}
+                    >
+                      {authVerification.checking ? (
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4" />
+                      )}
+                      {language === 'zh' ? '檢查授權狀態' : 'Check Authorization'}
+                    </button>
+
+                    {/* 重新授权 Agent Wallet 按钮 */}
+                    <button
+                      onClick={handleAuthorizeAgent}
+                      disabled={loading}
+                      className="flex items-center gap-2 px-4 py-2 rounded transition-colors text-sm font-medium disabled:opacity-50"
+                      style={{
+                        background: 'rgba(240, 185, 11, 0.1)',
+                        border: '1px solid rgba(240, 185, 11, 0.3)',
+                        color: '#F0B90B',
+                      }}
+                    >
+                      <Shield className="h-4 w-4" />
+                      {language === 'zh' ? '重新授權 Agent Wallet' : 'Re-authorize Agent Wallet'}
+                    </button>
+
+                    {/* 重新授权 Builder Fee 按钮 */}
+                    <button
+                      onClick={async () => {
+                        if (!walletClient || !agentWallet) return
+                        setLoading(true)
+                        try {
+                          const result = await approveHyperliquidBuilderFee(walletClient, {
+                            builderAddress: BUILDER_ADDRESS,
+                            maxFeeRate: 100,
+                            hyperliquidChain: agentWallet.hyperliquid_chain as 'Mainnet' | 'Testnet',
+                          })
+                          if (result.success) {
+                            await confirmBuilderFee(address!, 100)
+                            await loadAgentWallet()
+                            await verifyAuthorization()
+                          }
+                        } catch (err) {
+                          console.error('Builder Fee re-authorization failed:', err)
+                        } finally {
+                          setLoading(false)
+                        }
+                      }}
+                      disabled={loading}
+                      className="flex items-center gap-2 px-4 py-2 rounded transition-colors text-sm font-medium disabled:opacity-50"
+                      style={{
+                        background: 'rgba(14, 203, 129, 0.1)',
+                        border: '1px solid rgba(14, 203, 129, 0.3)',
+                        color: '#0ECB81',
+                      }}
+                    >
+                      <Key className="h-4 w-4" />
+                      {language === 'zh' ? '重新授權 Builder Fee' : 'Re-authorize Builder Fee'}
+                    </button>
+                  </div>
+
+                  {/* 最后检查时间 */}
+                  {authVerification.checkedAt && (
+                    <p className="text-xs mt-3" style={{ color: '#848E9C' }}>
+                      {language === 'zh' ? '最後檢查：' : 'Last checked: '}
+                      {authVerification.checkedAt.toLocaleString()}
+                      {authVerification.authorized && ' ✅'}
+                      {authVerification.authorized === false && ' ❌'}
+                    </p>
+                  )}
                 </div>
               )}
             </div>

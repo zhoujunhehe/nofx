@@ -102,7 +102,10 @@ func (p *ConfigProvider) fetchBTCETHLeverage(ctx context.Context) (interface{}, 
 }
 
 func (p *ConfigProvider) fetchMinPositionSizeGeneral(ctx context.Context) (interface{}, error) {
-	return 12, nil // 一般币种最小12 USDT
+	// 修改为 10 USDT：
+	// - Binance: 官方建议 >=10 USDT (之前硬编码 12 过于保守)
+	// - Hyperliquid: 支持 >=5 USDT (10 USDT 完全可用)
+	return 10, nil
 }
 
 func (p *ConfigProvider) fetchMinPositionSizeBTCETH(ctx context.Context) (interface{}, error) {
