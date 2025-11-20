@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"nofx/crypto"
 	"nofx/decision"
 	"nofx/logger"
 	"nofx/market"
@@ -12,6 +13,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/jmoiron/sqlx"
 )
 
 // AutoTraderConfig 自动交易配置（简化版 - AI全权决策）
@@ -183,7 +186,20 @@ func NewAutoTrader(config AutoTraderConfig, database interface{}, userID string)
 		trader = NewFuturesTrader(config.BinanceAPIKey, config.BinanceSecretKey, userID)
 	case "hyperliquid":
 		logger.Infof("🏦 [%s] 使用Hyperliquid交易", config.Name)
-		trader, err = NewHyperliquidTrader(config.HyperliquidPrivateKey, config.HyperliquidWalletAddr, config.HyperliquidTestnet)
+		// 解析 Hyperliquid 私钥（支持加密格式和后端托管的 Agent Wallet）
+		privateKey := config.HyperliquidPrivateKey
+		if database != nil {
+			if db, ok := database.(*sqlx.DB); ok {
+				decryptedKey, decryptErr := crypto.ResolveHyperliquidPrivateKey(db, config.HyperliquidPrivateKey)
+				if decryptErr != nil {
+					logger.Warnf("⚠️ 解析 Hyperliquid 私钥失败，尝试使用原始值: %v", decryptErr)
+					// 如果解密失败，可能是未加密的私钥，继续使用原始值
+				} else {
+					privateKey = decryptedKey
+				}
+			}
+		}
+		trader, err = NewHyperliquidTrader(privateKey, config.HyperliquidWalletAddr, config.HyperliquidTestnet)
 		if err != nil {
 			return nil, fmt.Errorf("初始化Hyperliquid交易器失败: %w", err)
 		}

@@ -408,35 +408,53 @@ func (d *PostgreSQLDatabase) GetExchanges(userID string) ([]*ExchangeConfig, err
 			return nil, err
 		}
 
-		if decrypted, err := d.decryptValue(exchange.APIKey, exchange.UserID, exchange.ID, "api_key"); err == nil {
-			exchange.APIKey = decrypted
-		} else {
-			return nil, err
+		// 解密 APIKey（如果是加密格式）
+		if d.cryptoService != nil && d.cryptoService.IsEncryptedStorageValue(exchange.APIKey) {
+			if decrypted, err := d.decryptValue(exchange.APIKey, exchange.UserID, exchange.ID, "api_key"); err == nil {
+				exchange.APIKey = decrypted
+			} else {
+				log.Printf("⚠️ 解密 APIKey 失败: %v，使用原始值", err)
+			}
 		}
-		if decrypted, err := d.decryptValue(exchange.SecretKey, exchange.UserID, exchange.ID, "secret_key"); err == nil {
-			exchange.SecretKey = decrypted
-		} else {
-			return nil, err
+		// 解密 SecretKey（如果是加密格式）
+		if d.cryptoService != nil && d.cryptoService.IsEncryptedStorageValue(exchange.SecretKey) {
+			if decrypted, err := d.decryptValue(exchange.SecretKey, exchange.UserID, exchange.ID, "secret_key"); err == nil {
+				exchange.SecretKey = decrypted
+			} else {
+				log.Printf("⚠️ 解密 SecretKey 失败: %v，使用原始值", err)
+			}
 		}
-		if decrypted, err := d.decryptValue(exchange.HyperliquidWalletAddr, exchange.UserID, exchange.ID, "hyperliquid_wallet_addr"); err == nil {
-			exchange.HyperliquidWalletAddr = decrypted
-		} else {
-			return nil, err
+		// 解密 HyperliquidWalletAddr（如果是加密格式）
+		if d.cryptoService != nil && d.cryptoService.IsEncryptedStorageValue(exchange.HyperliquidWalletAddr) {
+			if decrypted, err := d.decryptValue(exchange.HyperliquidWalletAddr, exchange.UserID, exchange.ID, "hyperliquid_wallet_addr"); err == nil {
+				exchange.HyperliquidWalletAddr = decrypted
+			} else {
+				log.Printf("⚠️ 解密 HyperliquidWalletAddr 失败: %v，使用原始值", err)
+			}
 		}
-		if decrypted, err := d.decryptValue(exchange.AsterUser, exchange.UserID, exchange.ID, "aster_user"); err == nil {
-			exchange.AsterUser = decrypted
-		} else {
-			return nil, err
+		// 解密 AsterUser（如果是加密格式）
+		if d.cryptoService != nil && d.cryptoService.IsEncryptedStorageValue(exchange.AsterUser) {
+			if decrypted, err := d.decryptValue(exchange.AsterUser, exchange.UserID, exchange.ID, "aster_user"); err == nil {
+				exchange.AsterUser = decrypted
+			} else {
+				log.Printf("⚠️ 解密 AsterUser 失败: %v，使用原始值", err)
+			}
 		}
-		if decrypted, err := d.decryptValue(exchange.AsterSigner, exchange.UserID, exchange.ID, "aster_signer"); err == nil {
-			exchange.AsterSigner = decrypted
-		} else {
-			return nil, err
+		// 解密 AsterSigner（如果是加密格式）
+		if d.cryptoService != nil && d.cryptoService.IsEncryptedStorageValue(exchange.AsterSigner) {
+			if decrypted, err := d.decryptValue(exchange.AsterSigner, exchange.UserID, exchange.ID, "aster_signer"); err == nil {
+				exchange.AsterSigner = decrypted
+			} else {
+				log.Printf("⚠️ 解密 AsterSigner 失败: %v，使用原始值", err)
+			}
 		}
-		if decrypted, err := d.decryptValue(exchange.AsterPrivateKey, exchange.UserID, exchange.ID, "aster_private_key"); err == nil {
-			exchange.AsterPrivateKey = decrypted
-		} else {
-			return nil, err
+		// 解密 AsterPrivateKey（如果是加密格式）
+		if d.cryptoService != nil && d.cryptoService.IsEncryptedStorageValue(exchange.AsterPrivateKey) {
+			if decrypted, err := d.decryptValue(exchange.AsterPrivateKey, exchange.UserID, exchange.ID, "aster_private_key"); err == nil {
+				exchange.AsterPrivateKey = decrypted
+			} else {
+				log.Printf("⚠️ 解密 AsterPrivateKey 失败: %v，使用原始值", err)
+			}
 		}
 
 		exchanges = append(exchanges, &exchange)
