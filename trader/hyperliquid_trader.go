@@ -27,7 +27,30 @@ type HyperliquidTrader struct {
 // NewHyperliquidTrader 创建Hyperliquid交易器
 func NewHyperliquidTrader(privateKeyHex string, walletAddr string, testnet bool) (*HyperliquidTrader, error) {
 	// 去掉私钥的 0x 前缀（如果有，不区分大小写）
+	originalKey := privateKeyHex
 	privateKeyHex = strings.TrimPrefix(strings.ToLower(privateKeyHex), "0x")
+
+	// 添加调试信息
+	log.Printf("🔍 [DEBUG] Hyperliquid私钥调试信息:")
+	log.Printf("  原始私钥长度: %d", len(originalKey))
+	log.Printf("  处理后私钥长度: %d", len(privateKeyHex))
+	if len(privateKeyHex) > 20 {
+		log.Printf("  私钥前20字符: %s...", privateKeyHex[:20])
+	} else {
+		log.Printf("  完整私钥: %s", privateKeyHex)
+	}
+	
+	// 验证私钥格式
+	if len(privateKeyHex) != 64 {
+		return nil, fmt.Errorf("私钥长度无效: 期望64字符，实际%d字符", len(privateKeyHex))
+	}
+	
+	// 验证是否只包含十六进制字符
+	for i, c := range privateKeyHex {
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) {
+			return nil, fmt.Errorf("私钥包含无效字符 '%c' 在位置 %d", c, i)
+		}
+	}
 
 	// 解析私钥
 	privateKey, err := crypto.HexToECDSA(privateKeyHex)
