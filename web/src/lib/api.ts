@@ -16,7 +16,7 @@ import type {
 import { CryptoService } from './crypto'
 import { httpClient } from './httpClient'
 
-const API_BASE = '/api'
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api'
 
 export const api = {
   // AI交易员管理接口
