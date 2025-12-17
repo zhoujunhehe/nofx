@@ -1,0 +1,25 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "docker/Dockerfile.backend",
+    "watchPatterns": [
+      "*.go",
+      "go.mod",
+      "go.sum",
+      "api/**",
+      "trader/**",
+      "manager/**",
+      "pool/**",
+      "logger/**",
+      "market/**",
+      "config/**"
+    ]
+  },
+  "deploy": {
+    "healthcheckPath": "/api/health",
+    "healthcheckTimeout": 300,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 3
+  }
+}

@@ -319,13 +319,17 @@ func main() {
 	// 获取API服务器端口（优先级：环境变量 > 数据库配置 > 默认值）
 	apiPort := 8080 // 默认端口
 
-	// 1. 优先从环境变量 NOFX_BACKEND_PORT 读取
-	if envPort := strings.TrimSpace(os.Getenv("NOFX_BACKEND_PORT")); envPort != "" {
+	// 1. 优先从环境变量 NOFX_BACKEND_PORT 或 PORT (Railway) 读取
+	envPort := strings.TrimSpace(os.Getenv("NOFX_BACKEND_PORT"))
+	if envPort == "" {
+		envPort = strings.TrimSpace(os.Getenv("PORT")) // Railway 使用 PORT
+	}
+	if envPort != "" {
 		if port, err := strconv.Atoi(envPort); err == nil && port > 0 {
 			apiPort = port
-			log.Printf("🔌 使用环境变量端口: %d (NOFX_BACKEND_PORT)", apiPort)
+			log.Printf("🔌 使用环境变量端口: %d", apiPort)
 		} else {
-			log.Printf("⚠️  环境变量 NOFX_BACKEND_PORT 无效: %s", envPort)
+			log.Printf("⚠️  环境变量端口无效: %s", envPort)
 		}
 	} else if apiPortStr != "" {
 		// 2. 从数据库配置读取（config.json 同步过来的）
